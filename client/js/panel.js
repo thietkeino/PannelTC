@@ -875,7 +875,7 @@
 
   // Khởi tạo hiển thị phiên bản hiện tại
   if (panelVersionPill && window.TCUpdater) {
-    panelVersionPill.textContent = 'v' + window.TCUpdater.version;
+    panelVersionPill.textContent = 'v' + window.TCUpdater.getVersion();
   }
 
   // Khởi tạo giá trị Repo & Token đã lưu
@@ -912,6 +912,11 @@
       return;
     }
 
+    // Cập nhật lại số phiên bản trên huy hiệu panel
+    if (panelVersionPill && window.TCUpdater.getVersion) {
+      panelVersionPill.textContent = 'v' + window.TCUpdater.getVersion();
+    }
+
     if (showFeedback) {
       log('Đang kiểm tra bản cập nhật mới trên GitHub (' + repo + ')…');
     }
@@ -925,6 +930,10 @@
         return;
       }
 
+      if (panelVersionPill && info.currentVersion) {
+        panelVersionPill.textContent = 'v' + info.currentVersion;
+      }
+
       if (info.hasUpdate) {
         log('🎉 Đã có phiên bản mới v' + info.newVersion + ' trên GitHub!');
         pendingDownloadUrl = info.downloadUrl;
@@ -932,6 +941,7 @@
         if (updateChangelog) updateChangelog.textContent = info.changelog;
         if (updateBanner) updateBanner.style.display = 'flex';
       } else {
+        if (updateBanner) updateBanner.style.display = 'none';
         if (showFeedback) {
           log('Bạn đang sử dụng phiên bản mới nhất (v' + info.currentVersion + ').');
           alert('Tuyệt vời! Pannel TC đang ở phiên bản mới nhất (v' + info.currentVersion + ').');

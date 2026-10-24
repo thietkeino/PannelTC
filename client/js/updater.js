@@ -5,11 +5,11 @@
 (function (global) {
   'use strict';
 
-  var LOCAL_VERSION = '1.4.0';
   var DEFAULT_REPO = 'thietkeino/PannelTC';
   var DEFAULT_BRANCH = 'main';
+  var FALLBACK_VERSION = '1.4.2';
 
-  // Helper so sánh 2 chuỗi phiên bản semver (ví dụ 1.4.1 > 1.4.0)
+  // Helper so sánh 2 chuỗi phiên bản semver (ví dụ 1.4.2 > 1.4.0)
   function compareVersions(v1, v2) {
     var p1 = String(v1).replace(/^v/, '').split('.').map(function (n) { return parseInt(n, 10) || 0; });
     var p2 = String(v2).replace(/^v/, '').split('.').map(function (n) { return parseInt(n, 10) || 0; });
@@ -23,8 +23,77 @@
     return 0;
   }
 
+  // Xác định thư mục cài đặt gốc của Extension
+  function getLocalExtensionPath() {
+    try {
+      if (global.__adobe_cep__ && typeof global.__adobe_cep__.getSystemPath === 'function') {
+        var p = global.__adobe_cep__.getSystemPath('extension');
+        if (p) return p.replace(/\\/g, '/').replace(/\/+$/, '');
+      }
+      if (typeof global.CSInterface !== 'undefined') {
+        var csi = new global.CSInterface();
+        var p2 = csi.getSystemPath('extension');
+        if (p2) return p2.replace(/\\/g, '/').replace(/\/+$/, '');
+      }
+    } catch (e) {}
+
+    try {
+      var cpNode = (global.cep_node && global.cep_node.require) ? global.cep_node.require : (typeof require === 'function' ? require : null);
+      if (cpNode) {
+        var pathMod = cpNode('path');
+        return pathMod.resolve(__dirname, '..', '..').replace(/\\/g, '/');
+      }
+    } catch (eNode) {}
+
+    return '';
+  }
+
+  // Tự động đọc phiên bản thật đang cài trên máy từ file version.json
+  function loadLocalVersion() {
+    // 1. Đọc qua Node fs nếu có
+    try {
+      var cpNode = (global.cep_node && global.cep_node.require) ? global.cep_node.require : (typeof require === 'function' ? require : null);
+      if (cpNode) {
+        var fsMod = cpNode('fs');
+        var pathMod = cpNode('path');
+        var extDir = getLocalExtensionPath();
+        if (extDir) {
+          var vFile = pathMod.join(extDir, 'version.json');
+          if (fsMod.existsSync(vFile)) {
+            var content = fsMod.readFileSync(vFile, 'utf8');
+            var parsed = JSON.parse(content);
+            if (parsed && parsed.version) {
+              return String(parsed.version).trim();
+            }
+          }
+        }
+      }
+    } catch (eFs) {}
+
+    // 2. Thử đọc đồng bộ qua XMLHttpRequest từ file ../version.json
+    try {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', '../version.json?_t=' + Date.now(), false);
+      xhr.send(null);
+      if ((xhr.status === 200 || xhr.status === 0) && xhr.responseText) {
+        var parsedXhr = JSON.parse(xhr.responseText);
+        if (parsedXhr && parsedXhr.version) {
+          return String(parsedXhr.version).trim();
+        }
+      }
+    } catch (eXhr) {}
+
+    return FALLBACK_VERSION;
+  }
+
   var TCUpdater = {
-    version: LOCAL_VERSION,
+    version: loadLocalVersion(),
+
+    // Luôn lấy phiên bản cập nhật nhất từ file version.json
+    getVersion: function () {
+      this.version = loadLocalVersion();
+      return this.version;
+    },
 
     // Lấy tên GitHub repository (vd: "thietkeino/PannelTC")
     getRepo: function () {
@@ -59,6 +128,7 @@
     // Kiểm tra xem có bản cập nhật mới trên GitHub hay không
     check: function (callback) {
       callback = callback || function () {};
+      var currentVer = this.getVersion();
       var repo = this.getRepo();
       var token = this.getToken();
 
@@ -89,7 +159,7 @@
             try {
               var data = JSON.parse(xhr.responseText);
               var remoteVer = data.version || '1.0.0';
-              var hasUpdate = compareVersions(remoteVer, LOCAL_VERSION) > 0;
+              var hasUpdate = compareVersions(remoteVer, currentVer) > 0;
 
               var downloadUrl = '';
               if (token) {
@@ -101,7 +171,7 @@
 
               callback(null, {
                 hasUpdate: hasUpdate,
-                currentVersion: LOCAL_VERSION,
+                currentVersion: currentVer,
                 newVersion: remoteVer,
                 changelog: data.changelog || 'Có bản cập nhật mới từ GitHub.',
                 downloadUrl: downloadUrl
@@ -137,18 +207,17 @@
       // Kiểm tra môi trường Node.js trong CEP
       var childProcess = null;
       try {
-        if (typeof require === 'function') {
+        if (global.cep_node && typeof global.cep_node.require === 'function') {
+          childProcess = global.cep_node.require('child_process');
+        } else if (typeof require === 'function') {
           childProcess = require('child_process');
-        } else if (window.cep && window.require) {
-          childProcess = window.require('child_process');
+        } else if (global.require) {
+          childProcess = global.require('child_process');
         }
       } catch (eNode) {}
 
       // Lấy đường dẫn cài đặt của extension
-      var extPath = '';
-      if (window.cep && typeof window.cep.getSystemPath === 'function') {
-        extPath = window.cep.getSystemPath('extension') || '';
-      }
+      var extPath = getLocalExtensionPath();
 
       // Nếu đang chạy trong browser hoặc không có Node.js
       if (!childProcess || !extPath) {
@@ -193,10 +262,12 @@
 
       var cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "' + psScript.replace(/"/g, '\\"') + '"';
 
+      var self = this;
       childProcess.exec(cmd, { windowsHide: true }, function (err, stdout, stderr) {
         if (err) {
           return completeCb(new Error('Lỗi cập nhật: ' + (stderr || err.message)));
         }
+        self.getVersion(); // Cập nhật lại số version mới từ file
         progressCb('Cập nhật hoàn tất! Đang khởi động lại panel…');
         setTimeout(function () {
           completeCb(null, { message: 'Cập nhật thành công!' });
