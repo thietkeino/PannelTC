@@ -338,13 +338,17 @@
   if (openExportFolderBtn) {
     openExportFolderBtn.addEventListener('click', function () {
       log('Đang mở thư mục xuất file in trên Windows Explorer…');
-      window.TCBridge.call('openFolder', [window._lastExportFolder || ''], function (err, res) {
+      window.TCBridge.call('openFolder', [window._lastExportFolder || '', true], function (err, res) {
         if (err) {
           log('Lỗi mở thư mục: ' + err.message, true);
           alert(err.message);
           return;
         }
-        log(res.message);
+        if (res && res.folder) {
+          launchExplorerForeground(res.folder, function () {
+            log('Đã mở thư mục xuất file in: ' + res.folder);
+          });
+        }
       });
     });
   }
@@ -758,41 +762,89 @@
   }
 
   // ------------------------------------------------------------------
-  // 6. Mở Windows Explorer & Thư mục dự án
+  // 6. Mở Windows Explorer & Thư mục dự án (Luôn đưa cửa sổ lên tiền cảnh đè lên Illustrator)
   // ------------------------------------------------------------------
-  var quickOpenFolderBtn = document.getElementById('quick-open-folder-btn');
-  var openProjectFolderBtn = document.getElementById('open-project-folder-btn');
-
-  // Nút trên thanh trạng thái: Mở trực tiếp Windows Explorer (1 cửa sổ duy nhất, không trùng lặp)
   var isOpeningExplorer = false;
-  function openWindowsExplorer() {
+
+  function launchExplorerForeground(targetPath, callback) {
     if (isOpeningExplorer) return;
     isOpeningExplorer = true;
 
-    log('Đang mở Windows Explorer…');
-    window.TCBridge.call('openExplorer', [], function (err, res) {
-      setTimeout(function () {
-        isOpeningExplorer = false;
-      }, 1000);
+    setTimeout(function () {
+      isOpeningExplorer = false;
+    }, 800);
 
+    var cp = (window.cep_node && window.cep_node.require) ? window.cep_node.require('child_process') : (typeof require !== 'undefined' ? require('child_process') : null);
+    var isWin = (navigator.platform && navigator.platform.indexOf('Win') > -1);
+
+    if (cp && isWin) {
+      var cmd = '';
+      if (targetPath) {
+        var safePath = targetPath.replace(/\//g, '\\');
+        // Mở thư mục và dùng AppActivate để kéo cửa sổ Explorer lên phía trước (đè lên Illustrator)
+        cmd = 'powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command "& { Start-Process explorer.exe -ArgumentList \'' + safePath.replace(/'/g, "''") + '\'; Start-Sleep -Milliseconds 250; (New-Object -ComObject WScript.Shell).AppActivate((Split-Path \'' + safePath.replace(/'/g, "''") + '\' -Leaf)) }"';
+      } else {
+        // Mở Windows Explorer chung và kích hoạt cửa sổ lên tiền cảnh
+        cmd = 'powershell -NoProfile -NonInteractive -WindowStyle Hidden -Command "& { $ws = New-Object -ComObject WScript.Shell; $ws.Run(\'explorer.exe\', 1, $false); Start-Sleep -Milliseconds 250; $ws.AppActivate(\'File Explorer\'); $ws.AppActivate(\'explorer\'); $ws.AppActivate(\'This PC\') }"';
+      }
+
+      cp.exec(cmd, { windowsHide: true }, function (err) {
+        if (err) {
+          console.warn('PowerShell launch failed, fallback to cmd start:', err);
+          var fallback = targetPath ? ('cmd.exe /c start "" "' + targetPath.replace(/\//g, '\\') + '"') : 'cmd.exe /c start "" explorer.exe';
+          cp.exec(fallback, { windowsHide: true });
+        }
+        if (typeof callback === 'function') callback(null);
+      });
+      return;
+    }
+
+    if (cp && !isWin) {
+      var macCmd = targetPath ? ('open "' + targetPath + '"') : 'open -a Finder';
+      cp.exec(macCmd);
+      if (typeof callback === 'function') callback(null);
+      return;
+    }
+
+    // Dự phòng qua ExtendScript nếu không có Node.js
+    if (targetPath) {
+      window.TCBridge.call('openFolder', [targetPath], callback);
+    } else {
+      window.TCBridge.call('openExplorer', [], callback);
+    }
+  }
+
+  var quickOpenFolderBtn = document.getElementById('quick-open-folder-btn');
+  var openProjectFolderBtn = document.getElementById('open-project-folder-btn');
+
+  // Nút trên thanh trạng thái: Mở trực tiếp Windows Explorer và đưa lên tiền cảnh
+  function openWindowsExplorer() {
+    log('Đang mở Windows Explorer…');
+    launchExplorerForeground(null, function (err) {
       if (err) {
         log('Lỗi mở Windows Explorer: ' + err.message, true);
         return;
       }
-      log(res.message || 'Đã mở Windows Explorer.');
+      log('Đã mở Windows Explorer.');
     });
   }
 
-  // Nút trong mục Tài liệu hiện hành: Mở thư mục của file .ai đang mở
+  // Nút trong mục Tài liệu hiện hành: Lấy đường dẫn file .ai đang mở và mở đè lên Illustrator
   function openCurrentProjectFolder() {
-    log('Đang mở thư mục chứa file đang mở trên Windows Explorer…');
-    window.TCBridge.call('openFolder', [], function (err, res) {
+    log('Đang xác định thư mục file đang mở…');
+    // skipExecute = true để JSX chỉ lấy đường dẫn, Node.js sẽ mở và đưa cửa sổ lên tiền cảnh
+    window.TCBridge.call('openFolder', ['', true], function (err, res) {
       if (err) {
         log('Lỗi mở thư mục: ' + err.message, true);
         alert(err.message);
         return;
       }
-      log(res.message);
+      if (res && res.folder) {
+        log('Đang mở thư mục: ' + res.folder);
+        launchExplorerForeground(res.folder, function () {
+          log('Đã mở thư mục trên Windows Explorer: ' + res.folder);
+        });
+      }
     });
   }
 

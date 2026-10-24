@@ -1195,7 +1195,7 @@ $._PannelTC = $._PannelTC || {};
     // -------------------------------------------------------------
     // 6. Mở thư mục dự án / xuất file trên Windows Explorer
     // -------------------------------------------------------------
-    P.openFolder = function (targetPath) {
+    P.openFolder = function (targetPath, skipExecute) {
         try {
             var folderObj = null;
             if (targetPath && typeof targetPath === 'string' && targetPath.length > 0) {
@@ -1216,8 +1216,10 @@ $._PannelTC = $._PannelTC || {};
                 throw new Error("Thư mục không tồn tại: " + (folderObj ? folderObj.fsName : ""));
             }
 
-            // Mở thư mục gốc bằng Windows Explorer (hoặc Finder trên macOS)
-            folderObj.execute();
+            // Chỉ gọi execute nếu không yêu cầu skipExecute (để Node.js phía CEP mở và đưa lên tiền cảnh)
+            if (!skipExecute) {
+                folderObj.execute();
+            }
 
             return P._reply({
                 success: true,
