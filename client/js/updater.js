@@ -7,7 +7,7 @@
 
   var DEFAULT_REPO = 'thietkeino/PannelTC';
   var DEFAULT_BRANCH = 'main';
-  var FALLBACK_VERSION = '1.4.2';
+  var FALLBACK_VERSION = '1.4.3';
 
   // Helper so sánh 2 chuỗi phiên bản semver (ví dụ 1.4.2 > 1.4.0)
   function compareVersions(v1, v2) {

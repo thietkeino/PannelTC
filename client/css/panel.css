@@ -378,10 +378,78 @@ body {
   color: var(--text-muted);
 }
 
-/* 3. Ghi kích thước Group */
-.dim-action-row {
+/* 3. Ghi kích thước Group (3 Chức năng chuyên biệt) */
+.dim-modes-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dim-mode-btn {
+  width: 100%;
+  padding: 6px 8px;
+  text-align: left;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.dim-btn-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.dim-btn-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dim-btn-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.dim-btn-text strong {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dim-btn-text small {
+  font-size: 9.5px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dim-mode-btn:hover .dim-btn-text strong {
+  color: #ffffff;
+}
+
+.dim-footer-row {
   display: flex;
   gap: 5px;
+  margin-top: 3px;
+}
+
+.dim-footer-row .btn {
+  width: 100%;
+  font-size: 10px;
+  padding: 4px;
 }
 
 .dim-settings-drawer {

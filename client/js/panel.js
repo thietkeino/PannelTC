@@ -20,8 +20,10 @@
   // Elements: Dàn trang DTF
   var runDtfBtn = document.getElementById('run-dtf-btn');
 
-  // Elements: Ghi kích thước
-  var runDimensionBtn = document.getElementById('run-dimension-btn');
+  // Elements: Ghi kích thước (3 chế độ chuyên biệt)
+  var dimModeTotalBtn = document.getElementById('dim-mode-total-btn');
+  var dimModeParentsBtn = document.getElementById('dim-mode-parents-btn');
+  var dimModeNestedBtn = document.getElementById('dim-mode-nested-btn');
   var clearDimensionBtn = document.getElementById('clear-dimension-btn');
   var toggleDimSettingsBtn = document.getElementById('toggle-dim-settings-btn');
   var dimSettingsDrawer = document.getElementById('dim-settings-drawer');
@@ -199,7 +201,7 @@
     });
   }
 
-  function getDimensionOptions() {
+  function getDimensionOptions(mode) {
     var unitEl = document.getElementById('dim-unit');
     var decimalsEl = document.getElementById('dim-decimals');
     var offsetEl = document.getElementById('dim-offset');
@@ -209,13 +211,11 @@
     var vSideEl = document.getElementById('dim-v-side');
     var colorEl = document.getElementById('dim-color');
 
-    var directEl = document.getElementById('dim-direct');
-    var parentEl = document.getElementById('dim-parent');
-    var nestedEl = document.getElementById('dim-nested');
     var strokeBoundsEl = document.getElementById('dim-stroke-bounds');
     var replaceEl = document.getElementById('dim-replace');
 
     return {
+      mode: mode || 'parents', // 'total' | 'parents' | 'nested'
       unit: unitEl ? unitEl.value : 'mm',
       decimals: decimalsEl ? parseInt(decimalsEl.value, 10) : 1,
       ratio: 1,
@@ -225,34 +225,59 @@
       hSide: hSideEl ? parseInt(hSideEl.value, 10) : 1,
       vSide: vSideEl ? parseInt(vSideEl.value, 10) : 1,
       color: colorEl ? parseInt(colorEl.value, 10) : 0,
-      direct: directEl ? directEl.checked : true,
-      parent: parentEl ? parentEl.checked : false,
-      nested: nestedEl ? nestedEl.checked : false,
       withStroke: strokeBoundsEl ? strokeBoundsEl.checked : false,
       replace: replaceEl ? replaceEl.checked : true
     };
   }
 
-  if (runDimensionBtn) {
-    runDimensionBtn.addEventListener('click', function () {
-      var opts = getDimensionOptions();
-      runDimensionBtn.disabled = true;
-      var originalText = runDimensionBtn.innerHTML;
-      runDimensionBtn.textContent = 'Đang vẽ…';
-      log('Đang tính toán & vẽ kích thước cho vùng chọn…');
+  function doRunDimension(mode, btn) {
+    var opts = getDimensionOptions(mode);
+    var origHtml = '';
+    if (btn) {
+      btn.disabled = true;
+      origHtml = btn.innerHTML;
+      btn.textContent = 'Đang đo & vẽ…';
+    }
 
-      window.TCBridge.call('autoDimension', [opts], function (err, res) {
-        runDimensionBtn.disabled = false;
-        runDimensionBtn.innerHTML = originalText;
+    var logDesc = (mode === 'total') ? 'kích thước tổng đối tượng' :
+                  (mode === 'parents') ? 'kích thước từng Group cha' : 'kích thước Group lồng nhau';
+    log('Đang tính toán & vẽ ' + logDesc + '…');
 
-        if (err) {
-          log('Lỗi ghi kích thước: ' + err.message, true);
-          return;
-        }
+    window.TCBridge.call('autoDimension', [opts], function (err, res) {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
 
-        log(res.message || 'Đã vẽ kích thước thành công!');
-        fetchState();
-      });
+      if (err) {
+        log('Lỗi ghi kích thước: ' + err.message, true);
+        alert(err.message);
+        return;
+      }
+
+      log(res.message || 'Đã vẽ kích thước thành công!');
+      fetchState();
+    });
+  }
+
+  // 1. Ghi kích thước tổng của đối tượng đang chọn
+  if (dimModeTotalBtn) {
+    dimModeTotalBtn.addEventListener('click', function () {
+      doRunDimension('total', dimModeTotalBtn);
+    });
+  }
+
+  // 2. Ghi kích thước tổng của nhiều group cha đang được chọn
+  if (dimModeParentsBtn) {
+    dimModeParentsBtn.addEventListener('click', function () {
+      doRunDimension('parents', dimModeParentsBtn);
+    });
+  }
+
+  // 3. Ghi kích thước của nhiều group cha con lồng nhau
+  if (dimModeNestedBtn) {
+    dimModeNestedBtn.addEventListener('click', function () {
+      doRunDimension('nested', dimModeNestedBtn);
     });
   }
 

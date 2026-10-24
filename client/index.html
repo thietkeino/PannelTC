@@ -17,7 +17,7 @@
           <span class="tagline">Adobe Illustrator 2024</span>
         </div>
       </div>
-      <div class="version-pill" id="panel-version-pill">v1.4.2</div>
+      <div class="version-pill" id="panel-version-pill">v1.4.3</div>
     </header>
 
     <!-- Banner thông báo cập nhật (Tự động hiện khi có bản mới trên GitHub) -->
@@ -156,14 +156,43 @@
       </div>
 
       <div class="card-body">
-        <div class="dim-action-row">
-          <button id="run-dimension-btn" class="btn btn-primary" type="button" style="flex: 2;">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="21 7 21 21 7 21"></polyline><line x1="21" y1="21" x2="3" y2="3"></line></svg>
-            Vẽ kích thước
+        <!-- 3 Nút chức năng đo chuyên biệt -->
+        <div class="dim-modes-container">
+          <button id="dim-mode-total-btn" class="btn btn-primary dim-mode-btn" type="button" title="Đo kích thước tổng (phủ bì) của toàn bộ đối tượng/group đang chọn">
+            <div class="dim-btn-content">
+              <span class="dim-btn-icon">📐</span>
+              <div class="dim-btn-text">
+                <strong>1. Kích thước tổng đối tượng</strong>
+                <small>Đo phủ bì toàn bộ vùng đang chọn</small>
+              </div>
+            </div>
           </button>
-          <button id="clear-dimension-btn" class="btn btn-secondary" type="button" title="Xóa các đường kích thước cũ">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-            Xóa
+
+          <button id="dim-mode-parents-btn" class="btn btn-secondary dim-mode-btn" type="button" title="Đo kích thước tổng của từng Group cha cấp ngoài cùng (không đo group con)">
+            <div class="dim-btn-content">
+              <span class="dim-btn-icon">📦</span>
+              <div class="dim-btn-text">
+                <strong>2. Kích thước từng Group cha</strong>
+                <small>Mỗi Group cha 1 kích thước tổng riêng</small>
+              </div>
+            </div>
+          </button>
+
+          <button id="dim-mode-nested-btn" class="btn btn-secondary dim-mode-btn" type="button" title="Đo chi tiết cả Group cha và các Group con lồng nhau bên trong">
+            <div class="dim-btn-content">
+              <span class="dim-btn-icon">📑</span>
+              <div class="dim-btn-text">
+                <strong>3. Group cha & con lồng nhau</strong>
+                <small>Đo chi tiết tất cả các cấp group</small>
+              </div>
+            </div>
+          </button>
+        </div>
+
+        <div class="dim-footer-row">
+          <button id="clear-dimension-btn" class="btn btn-secondary" type="button" title="Xóa toàn bộ layer kích thước cũ">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Xóa layer kích thước
           </button>
         </div>
 
@@ -222,9 +251,6 @@
           </div>
 
           <div class="checkbox-group">
-            <label><input type="checkbox" id="dim-direct" checked> Đo Group con trực tiếp</label>
-            <label><input type="checkbox" id="dim-parent"> Đo cả Group cha đang chọn</label>
-            <label><input type="checkbox" id="dim-nested"> Đo thêm Group lồng nhiều cấp</label>
             <label><input type="checkbox" id="dim-stroke-bounds"> Tính cả nét viền (visible bounds)</label>
             <label><input type="checkbox" id="dim-replace" checked> Tự xóa kích thước cũ khi vẽ mới</label>
           </div>

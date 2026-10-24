@@ -275,10 +275,9 @@ $._PannelTC = $._PannelTC || {};
             }
 
             rawOpts = rawOpts || {};
+            var mode = rawOpts.mode || "parents"; // Mặc định: "total" | "parents" | "nested"
             var options = {
-                direct: (typeof rawOpts.direct !== 'undefined') ? !!rawOpts.direct : true,
-                nested: !!rawOpts.nested,
-                parent: !!rawOpts.parent,
+                mode: mode,
                 unit: rawOpts.unit || "mm",
                 decimals: (typeof rawOpts.decimals === 'number') ? rawOpts.decimals : 1,
                 ratio: (rawOpts.ratio > 0) ? rawOpts.ratio : 1,
@@ -359,42 +358,132 @@ $._PannelTC = $._PannelTC || {};
                 };
             }
 
-            function addTarget(item, depth) {
+            function addTarget(item, depth, customName) {
                 if (shouldSkip(item) || alreadyAdded(item)) return;
                 try {
                     var b = boundsOf(item);
                     if (!isFinite(b.left) || !isFinite(b.right) ||
                         !isFinite(b.top) || !isFinite(b.bottom)) return;
                     if (b.right - b.left < 0.01 || b.top - b.bottom < 0.01) return;
-                    targets.push({ item: item, bounds: b, depth: depth });
+                    targets.push({ item: item, bounds: b, depth: depth, customName: customName });
                 } catch (e) {}
             }
 
-            function visitChildren(parent, level) {
-                if (!parent || parent.typename !== "GroupItem") return;
-                for (var c = 0; c < parent.groupItems.length; c++) {
-                    var child = parent.groupItems[c];
-                    if (shouldSkip(child)) continue;
-                    addTarget(child, level);
-                    if (options.nested) visitChildren(child, level + 1);
-                }
+            // Kiểm tra xem tổ tiên (ancestor) của item có nằm trong source không
+            function hasAncestorInSource(item) {
+                try {
+                    var p = item.parent;
+                    while (p && p.typename !== "Document" && p.typename !== "Layer") {
+                        for (var k = 0; k < source.length; k++) {
+                            if (source[k] === p) return true;
+                        }
+                        p = p.parent;
+                    }
+                } catch (e) {}
+                return false;
             }
 
-            for (var i = 0; i < source.length; i++) {
-                var item = source[i];
-                if (shouldSkip(item)) continue;
-                if (item.typename === "GroupItem") {
-                    if (options.direct || options.nested) visitChildren(item, 1);
-                    if (options.parent || (!options.direct && !options.nested) || item.groupItems.length === 0) {
-                        addTarget(item, 0);
+            // -------------------------------------------------------------
+            // PHÂN BIỆT 3 CHỨC NĂNG ĐO CHÍNH XÁC
+            // -------------------------------------------------------------
+
+            if (options.mode === "total") {
+                // CHỨC NĂNG 1: Ghi kích thước tổng của toàn bộ đối tượng đang chọn
+                var unionLeft = Infinity, unionRight = -Infinity;
+                var unionTop = -Infinity, unionBottom = Infinity;
+                var validCount = 0;
+
+                for (var s = 0; s < source.length; s++) {
+                    var it = source[s];
+                    if (shouldSkip(it)) continue;
+                    try {
+                        var bBox = boundsOf(it);
+                        if (isFinite(bBox.left) && isFinite(bBox.right) && isFinite(bBox.top) && isFinite(bBox.bottom)) {
+                            if (bBox.left < unionLeft) unionLeft = bBox.left;
+                            if (bBox.right > unionRight) unionRight = bBox.right;
+                            if (bBox.top > unionTop) unionTop = bBox.top;
+                            if (bBox.bottom < unionBottom) unionBottom = bBox.bottom;
+                            validCount++;
+                        }
+                    } catch (eBox) {}
+                }
+
+                if (validCount === 0 || unionRight <= unionLeft || unionTop <= unionBottom) {
+                    throw new Error("Không xác định được kích thước hợp lệ của đối tượng đang chọn.");
+                }
+
+                var customTitle = "DIM TỔNG VÙNG CHỌN";
+                if (source.length === 1) {
+                    try { if (source[0].name) customTitle = "DIM " + source[0].name; } catch (eName) {}
+                }
+
+                targets.push({
+                    item: source[0],
+                    bounds: { left: unionLeft, right: unionRight, top: unionTop, bottom: unionBottom },
+                    depth: 0,
+                    customName: customTitle
+                });
+
+            } else if (options.mode === "parents") {
+                // CHỨC NĂNG 2: Ghi kích thước tổng của nhiều Group cha đang được chọn (không đo group con)
+                var topParents = [];
+                for (var pIdx = 0; pIdx < source.length; pIdx++) {
+                    var pItem = source[pIdx];
+                    if (shouldSkip(pItem)) continue;
+                    // Bỏ qua nếu có group cha cấp cao hơn cũng nằm trong vùng chọn
+                    if (hasAncestorInSource(pItem)) continue;
+                    topParents.push(pItem);
+                }
+
+                for (var tp = 0; tp < topParents.length; tp++) {
+                    var curParent = topParents[tp];
+                    var pName = "";
+                    try { pName = curParent.name; } catch (ePN) {}
+                    var tagTitle = "DIM GROUP CHA [" + (tp + 1) + "]" + (pName ? (": " + pName) : "");
+                    addTarget(curParent, 0, tagTitle);
+                }
+
+            } else if (options.mode === "nested") {
+                // CHỨC NĂNG 3: Ghi kích thước của nhiều group cha con lồng nhau
+                var outerParents = [];
+                for (var oIdx = 0; oIdx < source.length; oIdx++) {
+                    var oItem = source[oIdx];
+                    if (shouldSkip(oItem)) continue;
+                    if (!hasAncestorInSource(oItem)) {
+                        outerParents.push(oItem);
                     }
-                } else {
-                    addTarget(item, 0);
+                }
+
+                function collectNestedGroups(parentGrp, depth) {
+                    if (!parentGrp || parentGrp.typename !== "GroupItem") return;
+                    for (var c = 0; c < parentGrp.groupItems.length; c++) {
+                        var childGrp = parentGrp.groupItems[c];
+                        if (shouldSkip(childGrp)) continue;
+                        var cName = "";
+                        try { cName = childGrp.name; } catch (eCN) {}
+                        var cTitle = "DIM CON [L" + depth + "]" + (cName ? (": " + cName) : "");
+                        addTarget(childGrp, depth, cTitle);
+                        // Đệ quy tiếp vào group lồng sâu hơn
+                        collectNestedGroups(childGrp, depth + 1);
+                    }
+                }
+
+                for (var op = 0; op < outerParents.length; op++) {
+                    var rootParent = outerParents[op];
+                    var rName = "";
+                    try { rName = rootParent.name; } catch (eRN) {}
+                    var rTitle = "DIM GROUP CHA [" + (op + 1) + "]" + (rName ? (": " + rName) : "");
+                    // 1. Đo Group cha
+                    addTarget(rootParent, 0, rTitle);
+                    // 2. Đo tất cả các Group con lồng nhau bên trong
+                    if (rootParent.typename === "GroupItem") {
+                        collectNestedGroups(rootParent, 1);
+                    }
                 }
             }
 
             if (targets.length === 0) {
-                throw new Error("Không tìm thấy Group/đối tượng hợp lệ để vẽ kích thước. Hãy chọn Group hoặc bật 'Đo cả Group cha'.");
+                throw new Error("Không tìm thấy Group hoặc đối tượng hợp lệ để vẽ kích thước.");
             }
 
             targets.sort(function (a, b) {
@@ -618,7 +707,7 @@ $._PannelTC = $._PannelTC || {};
                     container.note = DIM_TAG;
                     var originalName = "";
                     try { originalName = obj.item.name; } catch (ignore) {}
-                    container.name = "DIM " + (originalName || obj.item.typename) + " [" + (i + 1) + "]";
+                    container.name = obj.customName || ("DIM " + (originalName || obj.item.typename) + " [" + (i + 1) + "]");
                     drawHorizontal(container, obj.bounds);
                     drawVertical(container, obj.bounds);
                     successes++;
@@ -638,11 +727,16 @@ $._PannelTC = $._PannelTC || {};
             if (!madeLayer && initialLock) dimensionLayer.locked = true;
             try { app.redraw(); } catch (e) {}
 
+            var modeDesc = "kích thước";
+            if (options.mode === "total") modeDesc = "kích thước tổng đối tượng";
+            else if (options.mode === "parents") modeDesc = "kích thước cho " + successes + " Group cha";
+            else if (options.mode === "nested") modeDesc = "kích thước cho " + successes + " Group (cha & con lồng nhau)";
+
             return P._reply({
                 success: true,
                 count: successes,
                 fails: fails,
-                message: "Đã vẽ kích thước cho " + successes + " đối tượng (" + options.unit + ")." + (fails ? " (Lỗi " + fails + " đối tượng)" : "")
+                message: "Đã vẽ thành công " + modeDesc + " (" + options.unit + ")!" + (fails ? " (Lỗi " + fails + " mục)" : "")
             });
         } catch (err) {
             return P._error(err);

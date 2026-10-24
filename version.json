@@ -1,7 +1,7 @@
 {
-  "version": "1.4.2",
+  "version": "1.4.3",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
   "releaseDate": "2026-10-24",
-  "changelog": "Bản v1.4.2: Tự động đưa cửa sổ Windows Explorer lên tiền cảnh (Foreground) đè lên Illustrator khi mở thư mục hoặc mở nhanh Explorer."
+  "changelog": "Bản v1.4.3: Nâng cấp công cụ ghi kích thước thành 3 chức năng chuyên biệt: (1) Kích thước tổng đối tượng, (2) Kích thước từng Group cha, (3) Group cha con lồng nhau."
 }

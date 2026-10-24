@@ -52,9 +52,12 @@ PannelTC/
 - Hỗ trợ 2 chế độ linh hoạt: **Nhập số lượng tem DTF cần in** (tự động tạo thêm trang A3 mới khi vượt quá sức chứa của 1 trang) HOẶC **nhập số lượng trang A3 cần dàn kín** (Fill Full Sheet). Tối ưu diện tích bằng thuật toán Block Grid & MaxRects 2D Bin Packing.
 
 ### 📐 3. Ghi Kích Thước Group (Auto Dimension)
-- **Vẽ kích thước**: Tự động đo và vẽ đường dóng, mũi tên, số đo vector chuẩn xác cho Group / đối tượng đang chọn lên layer `__BG_AUTO_DIMENSIONS__`.
-- **Xóa**: Xóa nhanh các đường kích thước cũ lần chạy trước.
-- **Tùy chỉnh thông số**: Đơn vị (`mm`/`cm`), số lẻ, khoảng cách cách vật, cỡ chữ, độ dày nét, màu sắc và phạm vi đo.
+- Tự động đo và vẽ đường dóng, mũi tên, số đo vector chuẩn xác lên layer `__BG_AUTO_DIMENSIONS__` với **3 chức năng chuyên biệt**:
+  1. **1. Kích thước tổng đối tượng**: Đo phủ bì bao quát toàn bộ vùng chọn (1 bộ kích thước tổng Ngang x Cao cho cả cụm đang chọn).
+  2. **2. Kích thước từng Group cha**: Đo kích thước tổng của từng Group cha cấp ngoài cùng trong vùng chọn (mỗi Group cha 1 kích thước tổng riêng, không đo chi tiết con bên trong).
+  3. **3. Group cha & con lồng nhau**: Đo chi tiết cả Group cha và đệ quy đo tất cả các Group con lồng nhau các cấp bên trong (tự động tính khoảng cách tránh đè nét).
+- **Xóa layer kích thước**: Xóa sạch các đường kích thước cũ chỉ với 1 click.
+- **Tùy chỉnh thông số**: Đơn vị (`mm`/`cm`), số lẻ, khoảng cách cách vật, cỡ chữ, độ dày nét, màu sắc, tính viền stroke...
 
 ### 📦 4. Xuất Bản File In (Export Artboards)
 - Tự động convert text sang outlines, unite đối tượng cùng màu.
