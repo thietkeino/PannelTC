@@ -77,10 +77,9 @@ PannelTC/
 
 ### 📂 6. Mở Nhanh Thư Mục Dự Án (Windows Explorer)
 - Mở trực tiếp thư mục bằng Windows Explorer với 1 click chuột (không tốn RAM, 0% CPU, chạy qua tiến trình native của Windows):
-  - **Nút trên thanh trạng thái (Top Bar)**: Nút icon thư mục `[📂]` cạnh nút làm mới, bấm là mở ngay thư mục chứa file thiết kế hiện tại.
-  - **Trong mục "Tài liệu hiện hành"**: Nút `Mở thư mục chứa file (.ai)`.
+  - **Nút trên thanh trạng thái (Top Bar)**: Nút icon thư mục `[📂]` cạnh nút làm mới, bấm là mở ngay trình quản lý Windows Explorer (không cần mở file trước).
+  - **Trong mục "Tài liệu hiện hành"**: Nút `Mở thư mục chứa file (.ai)` (mở đúng thư mục lưu file thiết kế đang làm việc, tự động nhắc lưu nếu chưa bấm `Ctrl + S`).
   - **Trong mục "Xuất bản file in"**: Nút `Mở thư mục file in` (mở ngay thư mục vừa xuất file PNG & PDF).
-  - Tự động cảnh báo nếu file chưa được lưu (`Ctrl + S`).
 
 ### 🚀 7. Tự Động Cập Nhật Qua GitHub (Auto-Updater)
 - Giúp các máy nhân viên / máy khác tự động nhận code mới nhất khi bạn cập nhật code trên máy của bạn:

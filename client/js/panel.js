@@ -763,29 +763,18 @@
   var quickOpenFolderBtn = document.getElementById('quick-open-folder-btn');
   var openProjectFolderBtn = document.getElementById('open-project-folder-btn');
 
-  // Nút trên thanh trạng thái: Mở trực tiếp Windows Explorer (không cần mở file)
+  // Nút trên thanh trạng thái: Mở trực tiếp Windows Explorer (1 cửa sổ duy nhất, không trùng lặp)
+  var isOpeningExplorer = false;
   function openWindowsExplorer() {
-    log('Đang mở Windows Explorer…');
-    try {
-      var cp = (window.cep_node && window.cep_node.require) ? window.cep_node.require('child_process') : (typeof require !== 'undefined' ? require('child_process') : null);
-      if (cp && typeof cp.exec === 'function') {
-        var isWin = (navigator.platform && navigator.platform.indexOf('Win') > -1);
-        var cmd = isWin ? 'explorer.exe' : 'open .';
-        cp.exec(cmd, function (err) {
-          if (err) {
-            console.warn('cp.exec explorer error, fallback to JSX:', err);
-            window.TCBridge.call('openExplorer', [], function () {});
-          }
-        });
-        log('Đã mở Windows Explorer.');
-        return;
-      }
-    } catch (e) {
-      console.warn('Node.js cp.exec not available:', e);
-    }
+    if (isOpeningExplorer) return;
+    isOpeningExplorer = true;
 
-    // Fallback qua JSX host nếu môi trường không có Node.js
+    log('Đang mở Windows Explorer…');
     window.TCBridge.call('openExplorer', [], function (err, res) {
+      setTimeout(function () {
+        isOpeningExplorer = false;
+      }, 1000);
+
       if (err) {
         log('Lỗi mở Windows Explorer: ' + err.message, true);
         return;
