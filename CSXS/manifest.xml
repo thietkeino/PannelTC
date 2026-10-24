@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.tc.illustrator.pannel" ExtensionBundleVersion="1.0.0" ExtensionBundleName="Pannel TC">
+  <ExtensionList>
+    <Extension Id="com.tc.illustrator.pannel.workspace" Version="1.0.0" />
+  </ExtensionList>
+  <ExecutionEnvironment>
+    <HostList>
+      <!-- ILST: Adobe Illustrator (v28 is Illustrator 2024) -->
+      <Host Name="ILST" Version="[24.0,99.0)" />
+    </HostList>
+    <LocaleList>
+      <Locale Code="All" />
+    </LocaleList>
+    <RequiredRuntimeList>
+      <RequiredRuntime Name="CSXS" Version="10.0" />
+    </RequiredRuntimeList>
+  </ExecutionEnvironment>
+  <DispatchInfoList>
+    <Extension Id="com.tc.illustrator.pannel.workspace">
+      <DispatchInfo>
+        <Resources>
+          <MainPath>./client/index.html</MainPath>
+          <ScriptPath>./host/illustrator.jsx</ScriptPath>
+          <CEFCommandLine>
+            <Parameter>--enable-nodejs</Parameter>
+            <Parameter>--mixed-context</Parameter>
+          </CEFCommandLine>
+        </Resources>
+        <Lifecycle>
+          <AutoVisible>true</AutoVisible>
+        </Lifecycle>
+        <UI>
+          <Type>Panel</Type>
+          <Menu>Pannel TC</Menu>
+          <Geometry>
+            <Size>
+              <Height>650</Height>
+              <Width>340</Width>
+            </Size>
+            <MinSize>
+              <Height>320</Height>
+              <Width>260</Width>
+            </MinSize>
+            <MaxSize>
+              <Height>1600</Height>
+              <Width>1600</Width>
+            </MaxSize>
+          </Geometry>
+        </UI>
+      </DispatchInfo>
+    </Extension>
+  </DispatchInfoList>
+</ExtensionManifest>

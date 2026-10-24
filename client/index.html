@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pannel TC - Illustrator 2024</title>
+  <link rel="stylesheet" href="css/panel.css">
+</head>
+<body>
+  <div class="panel-container">
+    <!-- Header -->
+    <header class="panel-header">
+      <div class="brand-wrapper">
+        <div class="brand-logo">TC</div>
+        <div class="brand-info">
+          <h1>Pannel TC</h1>
+          <span class="tagline">Adobe Illustrator 2024</span>
+        </div>
+      </div>
+      <div class="version-pill" id="panel-version-pill">v1.4</div>
+    </header>
+
+    <!-- Banner thông báo cập nhật (Tự động hiện khi có bản mới trên GitHub) -->
+    <div id="update-banner" class="update-banner" style="display: none;">
+      <div class="update-icon">🚀</div>
+      <div class="update-body">
+        <div class="update-title">Bản mới: <span id="update-new-ver" class="update-ver-tag">v1.4.1</span></div>
+        <div class="update-changelog" id="update-changelog">Có tính năng mới!</div>
+      </div>
+      <button id="update-apply-btn" class="btn-update-apply" type="button" title="Cập nhật ngay lập tức">⚡ Cập nhật</button>
+      <button id="update-dismiss-btn" class="update-dismiss-btn" type="button" title="Đóng thông báo">✕</button>
+    </div>
+
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status-indicator">
+        <span id="status-dot" class="dot connecting"></span>
+        <span id="status-text">Đang kết nối…</span>
+      </div>
+      <div class="status-actions">
+        <button id="check-update-btn" class="icon-btn" title="Kiểm tra cập nhật từ GitHub" aria-label="Cập nhật GitHub">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2v6h-6"></path>
+            <path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path>
+            <path d="M3 22v-6h6"></path>
+            <path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path>
+          </svg>
+        </button>
+        <button id="quick-open-folder-btn" class="icon-btn" title="Mở nhanh thư mục dự án trên Windows Explorer" aria-label="Mở thư mục dự án">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+          </svg>
+        </button>
+        <button id="refresh-btn" class="icon-btn" title="Làm mới trạng thái" aria-label="Làm mới">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"></polyline>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- 1. TẠO FILE IN (TEMPLATE) - THU GỌN -->
+    <section class="card collapsible collapsed" id="section-template">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 9 6 2 18 2 18 9"></polyline>
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+            <rect x="6" y="14" width="12" height="8"></rect>
+          </svg>
+          Tạo File In (Template)
+        </div>
+        <div class="header-right">
+          <span class="card-badge">Template</span>
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="template-compact-box">
+          <div class="template-compact-row">
+            <select id="template-select" class="panel-select" title="Chọn mẫu in cần tạo">
+              <option value="xuong_gom">Xưởng Gốm Việt Bát Tràng (1 mặt)</option>
+              <option value="bat_trang_vn">Bát Tràng Việt Nam (1 mặt)</option>
+              <option value="day_ko_in">Đáy Không In (1 mặt)</option>
+            </select>
+            <button id="open-selected-template-btn" class="btn btn-primary btn-sm" type="button">Tạo file</button>
+            <button id="browse-template-btn" class="btn btn-secondary btn-icon-sm" type="button" title="Duyệt file .ait khác…">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            </button>
+          </div>
+
+          <div class="template-pills-row">
+            <button class="pill-btn" data-template="xuong_gom" type="button" title="Xuong gom viet bat trang 1 mat.ait">Gốm Bát Tràng</button>
+            <button class="pill-btn" data-template="bat_trang_vn" type="button" title="bat trang viet nam 1 mat.ait">Bát Tràng VN</button>
+            <button class="pill-btn" data-template="day_ko_in" type="button" title="day ko in 1 mat.ait">Đáy ko in</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. DÀN TRANG DTF A3 (DTF AUTO NESTING) - THU GỌN -->
+    <section class="card collapsible collapsed" id="section-dtf">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect>
+            <rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect>
+            <rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+          Dàn Trang DTF A3
+        </div>
+        <div class="header-right">
+          <span class="card-badge">MaxRects A3</span>
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="dtf-box">
+          <button id="run-dtf-btn" class="btn btn-dtf" type="button">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+            Khởi chạy Dàn trang DTF A3
+          </button>
+          <p class="card-desc">Tùy chọn số tem hoặc số trang A3, tự động tạo trang mới khi vượt quá</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. GHI KÍCH THƯỚC GROUP (AUTO DIMENSION) - THU GỌN -->
+    <section class="card collapsible collapsed" id="section-dimension">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0l12.6 12.6z"></path>
+            <line x1="7" y1="4.3" x2="8.4" y2="5.7"></line>
+            <line x1="10" y1="7.3" x2="12.8" y2="10.1"></line>
+            <line x1="14.4" y1="11.7" x2="15.8" y2="13.1"></line>
+          </svg>
+          Ghi Kích Thước Group
+        </div>
+        <div class="header-right">
+          <button id="toggle-dim-settings-btn" class="icon-btn" title="Cài đặt thông số đo" type="button">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          </button>
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="dim-action-row">
+          <button id="run-dimension-btn" class="btn btn-primary" type="button" style="flex: 2;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polyline points="21 7 21 21 7 21"></polyline><line x1="21" y1="21" x2="3" y2="3"></line></svg>
+            Vẽ kích thước
+          </button>
+          <button id="clear-dimension-btn" class="btn btn-secondary" type="button" title="Xóa các đường kích thước cũ">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            Xóa
+          </button>
+        </div>
+
+        <!-- Drawer cài đặt thông số -->
+        <div id="dim-settings-drawer" class="dim-settings-drawer" hidden>
+          <div class="settings-grid">
+            <div class="setting-item">
+              <label for="dim-unit">Đơn vị</label>
+              <select id="dim-unit">
+                <option value="mm" selected>mm</option>
+                <option value="cm">cm</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="dim-decimals">Số lẻ</label>
+              <select id="dim-decimals">
+                <option value="0">0</option>
+                <option value="1" selected>1 chữ số</option>
+                <option value="2">2 chữ số</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="dim-offset">Cách vật (mm)</label>
+              <input id="dim-offset" type="number" value="6" min="1" max="100" step="0.5">
+            </div>
+            <div class="setting-item">
+              <label for="dim-font-size">Cỡ chữ (pt)</label>
+              <input id="dim-font-size" type="number" value="9" min="3" max="72" step="0.5">
+            </div>
+            <div class="setting-item">
+              <label for="dim-h-side">Vị trí Ngang</label>
+              <select id="dim-h-side">
+                <option value="1" selected>Phía trên</option>
+                <option value="-1">Phía dưới</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="dim-v-side">Vị trí Dọc</label>
+              <select id="dim-v-side">
+                <option value="1" selected>Bên phải</option>
+                <option value="-1">Bên trái</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="dim-color">Màu đường đo</label>
+              <select id="dim-color">
+                <option value="0" selected>Xanh đậm</option>
+                <option value="1">Đen</option>
+                <option value="2">Đỏ</option>
+              </select>
+            </div>
+            <div class="setting-item">
+              <label for="dim-stroke">Nét viền (pt)</label>
+              <input id="dim-stroke" type="number" value="0.6" min="0.1" max="10" step="0.1">
+            </div>
+          </div>
+
+          <div class="checkbox-group">
+            <label><input type="checkbox" id="dim-direct" checked> Đo Group con trực tiếp</label>
+            <label><input type="checkbox" id="dim-parent"> Đo cả Group cha đang chọn</label>
+            <label><input type="checkbox" id="dim-nested"> Đo thêm Group lồng nhiều cấp</label>
+            <label><input type="checkbox" id="dim-stroke-bounds"> Tính cả nét viền (visible bounds)</label>
+            <label><input type="checkbox" id="dim-replace" checked> Tự xóa kích thước cũ khi vẽ mới</label>
+          </div>
+
+          <button id="open-dim-dialog-btn" class="btn-text-link" type="button">
+            ↗ Mở hộp thoại nâng cao gốc (ScriptUI)
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. XUẤT BẢN FILE IN (EXPORT ARTBOARDS SANG PNG & PDF) - THU GỌN -->
+    <section class="card collapsible collapsed" id="section-export">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          Xuất Bản File In
+        </div>
+        <div class="header-right">
+          <span class="card-badge">PNG+PDF</span>
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="export-action-row">
+          <button id="export-all-artboards-btn" class="btn btn-export" type="button" style="flex: 1;" title="Export toàn bộ Artboard">
+            Tất cả Artboards
+          </button>
+          <button id="export-cur-artboard-btn" class="btn btn-secondary" type="button" style="flex: 1;" title="Chỉ export Artboard hiện tại">
+            Chỉ Artboard này
+          </button>
+        </div>
+        <div style="margin-top: 6px;">
+          <button id="open-export-folder-btn" class="btn btn-subtle-folder" type="button" style="width: 100%;" title="Mở thư mục chứa các file in PNG & PDF trên Windows Explorer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            Mở thư mục file in (Windows Explorer)
+          </button>
+        </div>
+        <p class="card-desc">Tự động convert text, unite màu, xuất PNG (RGB) và PDF (CMYK) tách riêng từng artboard</p>
+      </div>
+    </section>
+
+    <!-- 5. TẠO THEO DANH SÁCH (DATA MERGE / VARIABLE) - THU GỌN -->
+    <section class="card collapsible collapsed" id="section-variable">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          Đổi Chữ Theo Danh Sách
+        </div>
+        <div class="header-right">
+          <span class="card-badge badge-purple">Data Merge</span>
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <!-- Bước 1: Quét nhận diện mẫu -->
+        <div class="variable-selection-box">
+          <span class="variable-sel-info" id="var-selection-text">Quét chọn mẫu trên Artboard rồi bấm Nhận diện</span>
+          <button id="var-check-sel-btn" class="btn btn-variable-scan" type="button" title="Kiểm tra mẫu đang chọn">
+            🔍 Nhận diện mẫu
+          </button>
+        </div>
+
+        <!-- Bước 2: Khung cấu hình & nhập liệu (Chỉ hiện khi bấm Nhận diện thành công) -->
+        <div id="var-config-container" style="display: none; margin-top: 8px;">
+          <!-- Danh sách gán cột cho các dòng text tìm thấy trong mẫu -->
+          <div class="form-group">
+            <div class="field-mapping-header">
+              <label>Gán cột dữ liệu cho từng dòng chữ trong mẫu:</label>
+              <span class="field-hint" id="var-fields-count">0 trường chữ</span>
+            </div>
+            <div id="var-fields-list" class="field-mapping-list">
+              <!-- Render động bằng JavaScript -->
+            </div>
+          </div>
+
+          <!-- Khung nhập danh sách -->
+          <div class="form-group" style="margin-top: 8px;">
+            <div class="textarea-header">
+              <label for="var-input-list">Dữ liệu danh sách (Excel / CSV):</label>
+              <span class="count-badge" id="var-line-count">0 dòng</span>
+            </div>
+
+            <!-- Công cụ CSV: Tải mẫu & Tải lên -->
+            <div class="csv-toolbar">
+              <button id="var-download-csv-btn" class="btn-csv-action" type="button" title="Tải file CSV mẫu tương ứng với các trường chữ tìm được">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Tải file CSV mẫu
+              </button>
+              <button id="var-upload-csv-btn" class="btn-csv-action" type="button" title="Tải file CSV từ máy tính để tự động điền danh sách">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Tải lên file CSV
+              </button>
+              <input type="file" id="var-csv-file-input" accept=".csv,.txt,.tsv" style="display: none;">
+            </div>
+
+            <textarea id="var-input-list" class="textarea-list" rows="5" placeholder="Copy các cột từ Excel hoặc bấm 'Tải lên file CSV' ở trên...&#10;Ví dụ:&#10;Nguyễn Văn An&#9;Trưởng Phòng&#9;Chúc mừng sinh nhật&#10;Trần Thị Bình&#9;Nhân Viên&#9;Chúc bạn thành công"></textarea>
+            <p class="field-sub-desc">💡 Tải file CSV mẫu về máy để điền trong Excel, hoặc dán trực tiếp dữ liệu từ Excel vào ô trên.</p>
+          </div>
+
+          <!-- Bố cục: Chỉ chọn số cột (Tự động cách đều 10mm) -->
+          <div class="dim-grid-2" style="margin-top: 8px;">
+            <div class="input-inline">
+              <label for="var-cols">Số cột dàn lưới:</label>
+              <input type="number" id="var-cols" class="input-num" value="2" min="1" max="20" step="1">
+            </div>
+            <div class="input-inline">
+              <label for="var-start-pos">Vị trí xếp:</label>
+              <select id="var-start-pos" class="select-box">
+                <option value="right" selected>Bên phải mẫu</option>
+                <option value="below">Bên dưới mẫu</option>
+                <option value="inplace">Thay thế trực tiếp</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Thông báo tự động cách đều 10mm -->
+          <div class="auto-gap-note">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            Tự động giãn cách 10mm giữa các cột và hàng (hoàn toàn không dính nhau).
+          </div>
+
+          <div class="checkbox-group" style="margin-top: 6px;">
+            <label><input type="checkbox" id="var-create-group" checked> Gom tất cả bản sao vào 1 Group</label>
+            <label><input type="checkbox" id="var-keep-master" checked> Giữ nguyên mẫu gốc (Master)</label>
+          </div>
+
+          <!-- Nút hành động chính -->
+          <div class="dim-btn-row" style="margin-top: 8px;">
+            <button id="var-generate-btn" class="btn btn-variable" type="button" style="width: 100%;">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              Tạo Danh Sách Tự Động
+            </button>
+          </div>
+        </div>
+
+        <p class="card-desc" style="margin-top: 6px;">Quét chọn mẫu trên Artboard, bấm Nhận diện để hiển thị các trường chữ và dán dữ liệu.</p>
+      </div>
+    </section>
+
+    <!-- 6. THÔNG TIN TÀI LIỆU - THU GỌN -->
+    <section class="card collapsible" id="section-doc-info">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+          </svg>
+          Tài liệu hiện hành
+        </div>
+        <div class="header-right">
+          <span id="doc-saved-status" class="card-badge">---</span>
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div class="info-grid">
+          <div class="info-item">
+            <span class="info-label">Tên File</span>
+            <span id="doc-name" class="info-value">Chưa mở file</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Đang chọn</span>
+            <span id="doc-selection" class="info-value">0 đối tượng</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Artboards</span>
+            <span id="doc-artboards" class="info-value">0 Artboard</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Phiên bản</span>
+            <span id="app-version" class="info-value">---</span>
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <button id="open-project-folder-btn" class="btn btn-subtle-folder" type="button" style="width: 100%;" title="Mở thư mục chứa file thiết kế này trên Windows Explorer">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+            Mở thư mục chứa file (.ai)
+          </button>
+        </div>
+
+        <!-- Cấu hình GitHub Auto-Update -->
+        <div class="repo-setting-box" style="margin-top: 8px;">
+          <div class="repo-setting-label">
+            <span>Tự động cập nhật qua GitHub:</span>
+          </div>
+          <div class="repo-setting-row">
+            <input type="text" id="github-repo-input" class="input-repo" value="thietkeino/PannelTC" placeholder="username/repo (vd: thietkeino/PannelTC)" title="Nhập GitHub Repo để các máy tự cập nhật">
+            <button id="save-repo-btn" class="btn-subtle" type="button" title="Lưu cấu hình">Lưu</button>
+            <button id="manual-check-update-btn" class="btn-subtle" type="button" title="Kiểm tra bản mới ngay">Check 🔄</button>
+          </div>
+          <div class="repo-setting-row" style="margin-top: 4px;">
+            <input type="password" id="github-token-input" class="input-repo" placeholder="GitHub Token nếu để Private (tùy chọn)" title="Nhập GitHub Personal Access Token nếu Repo là Private">
+          </div>
+          <p class="field-sub-desc">💡 Mẹo: Nếu chuyển Repo sang <b>Public</b>, các máy khác không cần phải nhập Token.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6. NHẬT KÝ HỆ THỐNG - THU GỌN -->
+    <section class="card collapsible collapsed" id="section-logs">
+      <div class="card-header accordion-trigger" title="Nhấp để mở / thu gọn">
+        <div class="card-title">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="4 17 10 11 4 5"></polyline>
+            <line x1="12" y1="19" x2="20" y2="19"></line>
+          </svg>
+          Nhật ký hệ thống
+        </div>
+        <div class="header-right">
+          <span class="chevron-icon">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </span>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div id="console-box" class="console-box">[Sẵn sàng] Pannel TC v1.4 - Chế độ thu gọn thông minh</div>
+      </div>
+    </section>
+  </div>
+
+  <script src="js/bridge.js"></script>
+  <script src="js/updater.js"></script>
+  <script src="js/panel.js"></script>
+</body>
+</html>
