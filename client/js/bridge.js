@@ -18,7 +18,8 @@
     runExportArtboardScript: true,
     getVariableSelectionInfo: true,
     generateFromList: true,
-    openFolder: true
+    openFolder: true,
+    openExplorer: true
   };
 
   // Tự động đồng bộ đường dẫn Extension từ Adobe CEP sang Illustrator ExtendScript
@@ -127,6 +128,11 @@
               success: true,
               folder: 'D:/App/Dự án/In Ấn',
               message: 'Mô phỏng mở thư mục trên Windows Explorer.'
+            });
+          } else if (method === 'openExplorer') {
+            callback(null, {
+              success: true,
+              message: 'Mô phỏng mở Windows Explorer.'
             });
           } else if (method === 'ping') {
             callback(null, { status: 'mock', message: 'Mô phỏng kết nối (chế độ browser)!' });

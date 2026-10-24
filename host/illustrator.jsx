@@ -1229,6 +1229,26 @@ $._PannelTC = $._PannelTC || {};
         }
     };
 
+    P.openExplorer = function () {
+        try {
+            var exp = new File("C:/Windows/explorer.exe");
+            if (exp.exists) {
+                exp.execute();
+                return P._reply({
+                    success: true,
+                    message: "Đã mở Windows Explorer."
+                });
+            }
+            Folder.myDocuments.execute();
+            return P._reply({
+                success: true,
+                message: "Đã mở File Explorer."
+            });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
     // -------------------------------------------------------------
     // 7. Tiện ích kiểm tra
     // -------------------------------------------------------------

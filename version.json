@@ -1,7 +1,7 @@
 {
-  "version": "1.4.0",
+  "version": "1.4.1",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
   "releaseDate": "2026-10-24",
-  "changelog": "Bản cập nhật v1.4.0: Thêm tính năng Đổi chữ theo danh sách (Data Merge), xuất/nhập CSV tự động và mở nhanh thư mục Windows Explorer."
+  "changelog": "Bản v1.4.1: Tách biệt nút mở nhanh Windows Explorer trên thanh tiêu đề và nút mở thư mục file .ai trong Tài liệu hiện hành."
 }

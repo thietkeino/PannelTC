@@ -758,13 +758,45 @@
   }
 
   // ------------------------------------------------------------------
-  // 6. Mở thư mục dự án trên Windows Explorer
+  // 6. Mở Windows Explorer & Thư mục dự án
   // ------------------------------------------------------------------
   var quickOpenFolderBtn = document.getElementById('quick-open-folder-btn');
   var openProjectFolderBtn = document.getElementById('open-project-folder-btn');
 
+  // Nút trên thanh trạng thái: Mở trực tiếp Windows Explorer (không cần mở file)
+  function openWindowsExplorer() {
+    log('Đang mở Windows Explorer…');
+    try {
+      var cp = (window.cep_node && window.cep_node.require) ? window.cep_node.require('child_process') : (typeof require !== 'undefined' ? require('child_process') : null);
+      if (cp && typeof cp.exec === 'function') {
+        var isWin = (navigator.platform && navigator.platform.indexOf('Win') > -1);
+        var cmd = isWin ? 'explorer.exe' : 'open .';
+        cp.exec(cmd, function (err) {
+          if (err) {
+            console.warn('cp.exec explorer error, fallback to JSX:', err);
+            window.TCBridge.call('openExplorer', [], function () {});
+          }
+        });
+        log('Đã mở Windows Explorer.');
+        return;
+      }
+    } catch (e) {
+      console.warn('Node.js cp.exec not available:', e);
+    }
+
+    // Fallback qua JSX host nếu môi trường không có Node.js
+    window.TCBridge.call('openExplorer', [], function (err, res) {
+      if (err) {
+        log('Lỗi mở Windows Explorer: ' + err.message, true);
+        return;
+      }
+      log(res.message || 'Đã mở Windows Explorer.');
+    });
+  }
+
+  // Nút trong mục Tài liệu hiện hành: Mở thư mục của file .ai đang mở
   function openCurrentProjectFolder() {
-    log('Đang mở thư mục dự án trên Windows Explorer…');
+    log('Đang mở thư mục chứa file đang mở trên Windows Explorer…');
     window.TCBridge.call('openFolder', [], function (err, res) {
       if (err) {
         log('Lỗi mở thư mục: ' + err.message, true);
@@ -776,7 +808,7 @@
   }
 
   if (quickOpenFolderBtn) {
-    quickOpenFolderBtn.addEventListener('click', openCurrentProjectFolder);
+    quickOpenFolderBtn.addEventListener('click', openWindowsExplorer);
   }
 
   if (openProjectFolderBtn) {
