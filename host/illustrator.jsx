@@ -816,7 +816,7 @@ $._PannelTC = $._PannelTC || {};
     // -------------------------------------------------------------
     // 5. Xuất bản file in (Export Artboard sang PNG & PDF)
     // -------------------------------------------------------------
-    P.exportArtboards = function (scope) {
+    P.exportArtboards = function (scope, exportMode) {
         try {
             if (app.documents.length === 0) {
                 throw new Error("Vui lòng mở một file Illustrator trước khi export!");
@@ -826,6 +826,8 @@ $._PannelTC = $._PannelTC || {};
                 throw new Error("Vui lòng lưu file Illustrator trước khi xuất bản!");
             }
 
+            exportMode = exportMode || 'single'; // 'single' (gom 1 file) | 'separate' (mỗi artboard 1 file)
+
             var originalFile = doc.fullName;
             var docPath = doc.path;
             var docName = doc.name.replace(/\.[^\.]+$/, '');
@@ -834,116 +836,215 @@ $._PannelTC = $._PannelTC || {};
             docName = docName.replace(/\s*-\s*/g, '-');
 
             var totalArtboards = doc.artboards.length;
-            var artboardsToExport = [];
-
-            if (scope === 'current') {
-                artboardsToExport.push(doc.artboards.getActiveArtboardIndex());
-            } else {
-                for (var i = 0; i < totalArtboards; i++) {
-                    artboardsToExport.push(i);
-                }
-            }
-
             var successCount = 0;
             var failCount = 0;
             var exportedFiles = [];
 
-            for (var abIdx = 0; abIdx < artboardsToExport.length; abIdx++) {
-                var artboardIndex = artboardsToExport[abIdx];
+            // Helper: outline toàn bộ text trong document
+            function outlineAllText() {
+                for (var ti = doc.textFrames.length - 1; ti >= 0; ti--) {
+                    try {
+                        doc.textFrames[ti].createOutline();
+                    } catch(e) {}
+                }
+            }
+
+            // Helper: unite các objects cùng màu trên từng artboard
+            function uniteColorsOnArtboard(artboardIndex) {
                 try {
                     doc.artboards.setActiveArtboardIndex(artboardIndex);
-                    var artboard = doc.artboards[artboardIndex];
-                    var artNumber = String(artboardIndex + 1);
-                    if (artNumber.length == 1) artNumber = "0" + artNumber;
-                    var exportName = docName + "-art" + artNumber;
-
-                    // Outline text trong artboard
-                    var artboardRect = artboard.artboardRect;
-                    for (var ti = doc.textFrames.length - 1; ti >= 0; ti--) {
-                        try {
-                            var tf = doc.textFrames[ti];
-                            var tb = tf.geometricBounds;
-                            if (tb[0] < artboardRect[2] && tb[2] > artboardRect[0] &&
-                                tb[1] > artboardRect[3] && tb[3] < artboardRect[1]) {
-                                tf.createOutline();
+                    doc.selectObjectsOnActiveArtboard();
+                    if (doc.selection.length >= 2) {
+                        var colorGroups = {};
+                        for (var si = 0; si < doc.selection.length; si++) {
+                            var item = doc.selection[si];
+                            if (item.typename == "PathItem" && item.filled) {
+                                var fc = item.fillColor;
+                                var ck = "";
+                                if (fc.typename == "RGBColor") {
+                                    ck = "RGB_" + Math.round(fc.red) + "_" + Math.round(fc.green) + "_" + Math.round(fc.blue);
+                                } else if (fc.typename == "CMYKColor") {
+                                    ck = "CMYK_" + Math.round(fc.cyan) + "_" + Math.round(fc.magenta) + "_" + Math.round(fc.yellow) + "_" + Math.round(fc.black);
+                                } else if (fc.typename == "GrayColor") {
+                                    ck = "GRAY_" + Math.round(fc.gray);
+                                }
+                                if (ck) {
+                                    if (!colorGroups[ck]) colorGroups[ck] = [];
+                                    colorGroups[ck].push(item);
+                                }
                             }
-                        } catch(e) {}
+                        }
+                        for (var k in colorGroups) {
+                            var grpItems = colorGroups[k];
+                            if (grpItems.length >= 3) {
+                                doc.selection = null;
+                                for (var gi = 0; gi < grpItems.length; gi++) grpItems[gi].selected = true;
+                                app.executeMenuCommand("Live Pathfinder Add");
+                                app.executeMenuCommand("expandStyle");
+                            }
+                        }
+                        doc.selection = null;
+                    }
+                } catch(e) {}
+            }
+
+            // =========================================================================
+            // CHẾ ĐỘ 1: XUẤT TẤT CẢ ARTBOARD VÀO 1 FILE (Single Multi-Page File)
+            // =========================================================================
+            if (scope !== 'current' && exportMode === 'single') {
+                var exportName = docName + (totalArtboards > 1 ? "-all" : "-art01");
+
+                // 1. Chuẩn bị: Outline toàn bộ text & unite màu trên tất cả artboards
+                outlineAllText();
+                for (var aIdx = 0; aIdx < totalArtboards; aIdx++) {
+                    uniteColorsOnArtboard(aIdx);
+                }
+
+                // 2. Export PNG (RGB - 300 DPI) trước (không làm đổi trạng thái active document)
+                doc.documentColorSpace = DocumentColorSpace.RGB;
+                var pngFile = new File(docPath + "/" + exportName + ".png");
+                var pngOptions = new ExportOptionsPNG24();
+                pngOptions.transparency = false;
+                pngOptions.antiAliasing = true;
+
+                if (totalArtboards > 1) {
+                    var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                    for (var a = 0; a < totalArtboards; a++) {
+                        var r = doc.artboards[a].artboardRect;
+                        if (r[0] < minX) minX = r[0];
+                        if (r[2] > maxX) maxX = r[2];
+                        if (r[1] > maxY) maxY = r[1];
+                        if (r[3] < minY) minY = r[3];
                     }
 
-                    // Unite objects cùng màu
-                    try {
-                        doc.selectObjectsOnActiveArtboard();
-                        if (doc.selection.length >= 2) {
-                            var colorGroups = {};
-                            for (var si = 0; si < doc.selection.length; si++) {
-                                var item = doc.selection[si];
-                                if (item.typename == "PathItem" && item.filled) {
-                                    var fc = item.fillColor;
-                                    var ck = "";
-                                    if (fc.typename == "RGBColor") {
-                                        ck = "RGB_" + Math.round(fc.red) + "_" + Math.round(fc.green) + "_" + Math.round(fc.blue);
-                                    } else if (fc.typename == "CMYKColor") {
-                                        ck = "CMYK_" + Math.round(fc.cyan) + "_" + Math.round(fc.magenta) + "_" + Math.round(fc.yellow) + "_" + Math.round(fc.black);
-                                    } else if (fc.typename == "GrayColor") {
-                                        ck = "GRAY_" + Math.round(fc.gray);
-                                    }
-                                    if (ck) {
-                                        if (!colorGroups[ck]) colorGroups[ck] = [];
-                                        colorGroups[ck].push(item);
-                                    }
-                                }
-                            }
-                            for (var k in colorGroups) {
-                                var grpItems = colorGroups[k];
-                                if (grpItems.length >= 3) {
-                                    doc.selection = null;
-                                    for (var gi = 0; gi < grpItems.length; gi++) grpItems[gi].selected = true;
-                                    app.executeMenuCommand("Live Pathfinder Add");
-                                    app.executeMenuCommand("expandStyle");
-                                }
-                            }
-                            doc.selection = null;
-                        }
-                    } catch(e) {}
+                    // Giới hạn an toàn điểm ảnh tránh lỗi vượt ngưỡng 16000px của Illustrator
+                    var widthPt = Math.max(1, maxX - minX);
+                    var heightPt = Math.max(1, maxY - minY);
+                    var scale = 300;
+                    var maxPx = Math.max(widthPt, heightPt) * (scale / 72);
+                    if (maxPx > 16000) {
+                        scale = Math.floor((16000 / Math.max(widthPt, heightPt)) * 72);
+                        if (scale < 72) scale = 72;
+                    }
+                    pngOptions.horizontalScale = scale;
+                    pngOptions.verticalScale = scale;
 
-                    // 1. Export PNG (RGB - 300 DPI)
-                    var pngFile = new File(docPath + "/" + exportName + ".png");
-                    var pngOptions = new ExportOptionsPNG24();
+                    var tempAb = doc.artboards.add([minX, maxY, maxX, minY]);
+                    doc.artboards.setActiveArtboardIndex(doc.artboards.length - 1);
                     pngOptions.artBoardClipping = true;
-                    pngOptions.transparency = false;
-                    pngOptions.antiAliasing = true;
+                    doc.exportFile(pngFile, ExportType.PNG24, pngOptions);
+                    tempAb.remove();
+                } else {
+                    doc.artboards.setActiveArtboardIndex(0);
                     pngOptions.horizontalScale = 300;
                     pngOptions.verticalScale = 300;
-                    doc.documentColorSpace = DocumentColorSpace.RGB;
+                    pngOptions.artBoardClipping = true;
                     doc.exportFile(pngFile, ExportType.PNG24, pngOptions);
+                }
 
-                    // 2. Export PDF (CMYK - 300 DPI)
-                    doc.documentColorSpace = DocumentColorSpace.CMYK;
-                    var pdfFile = new File(docPath + "/" + exportName + ".pdf");
-                    var pdfOptions = new PDFSaveOptions();
-                    pdfOptions.compatibility = PDFCompatibility.ACROBAT5;
-                    pdfOptions.preserveEditability = false;
-                    pdfOptions.generateThumbnails = false;
-                    pdfOptions.colorDownsampling = 300;
-                    pdfOptions.colorDownsamplingMethod = DownsampleMethod.BICUBICDOWNSAMPLE;
-                    pdfOptions.colorDownsamplingImageThreshold = 450;
-                    pdfOptions.grayscaleDownsampling = 300;
-                    pdfOptions.grayscaleDownsamplingMethod = DownsampleMethod.BICUBICDOWNSAMPLE;
-                    pdfOptions.grayscaleDownsamplingImageThreshold = 450;
-                    pdfOptions.artboardRange = String(artboardIndex + 1);
-                    pdfOptions.fontSubsetThreshold = 100;
-                    doc.saveAs(pdfFile, pdfOptions);
+                // 3. Export PDF (CMYK - 300 DPI) - Tất cả Artboards thành 1 file PDF đa trang
+                doc.documentColorSpace = DocumentColorSpace.CMYK;
+                var pdfFile = new File(docPath + "/" + exportName + ".pdf");
+                var pdfOptions = new PDFSaveOptions();
+                pdfOptions.compatibility = PDFCompatibility.ACROBAT5;
+                pdfOptions.preserveEditability = false;
+                pdfOptions.generateThumbnails = false;
+                pdfOptions.colorDownsampling = 300;
+                pdfOptions.colorDownsamplingMethod = DownsampleMethod.BICUBICDOWNSAMPLE;
+                pdfOptions.colorDownsamplingImageThreshold = 450;
+                pdfOptions.grayscaleDownsampling = 300;
+                pdfOptions.grayscaleDownsamplingMethod = DownsampleMethod.BICUBICDOWNSAMPLE;
+                pdfOptions.grayscaleDownsamplingImageThreshold = 450;
+                pdfOptions.artboardRange = ""; // Rỗng = Lưu toàn bộ artboards vào các trang của 1 file PDF
+                pdfOptions.fontSubsetThreshold = 100;
+                doc.saveAs(pdfFile, pdfOptions);
 
-                    successCount++;
-                    var pngSize = (pngFile.length / 1024 / 1024).toFixed(2);
-                    var pdfSize = (pdfFile.length / 1024 / 1024).toFixed(2);
-                    exportedFiles.push({
-                        name: exportName,
-                        pngSize: pngSize,
-                        pdfSize: pdfSize
-                    });
-                } catch(e) {
-                    failCount++;
+                successCount = totalArtboards;
+                var pngSize = pngFile.exists ? (pngFile.length / 1024 / 1024).toFixed(2) : "0";
+                var pdfSize = pdfFile.exists ? (pdfFile.length / 1024 / 1024).toFixed(2) : "0";
+                exportedFiles.push({
+                    name: exportName,
+                    pngSize: pngSize,
+                    pdfSize: pdfSize
+                });
+
+            } else {
+                // =========================================================================
+                // CHẾ ĐỘ 2: XUẤT MỖI ARTBOARD LÀ 1 FILE ĐỘC LẬP (hoặc chỉ Artboard hiện tại)
+                // =========================================================================
+                var artboardsToExport = [];
+                if (scope === 'current') {
+                    artboardsToExport.push(doc.artboards.getActiveArtboardIndex());
+                } else {
+                    for (var i = 0; i < totalArtboards; i++) {
+                        artboardsToExport.push(i);
+                    }
+                }
+
+                for (var abIdx = 0; abIdx < artboardsToExport.length; abIdx++) {
+                    var artboardIndex = artboardsToExport[abIdx];
+                    try {
+                        doc.artboards.setActiveArtboardIndex(artboardIndex);
+                        var artboard = doc.artboards[artboardIndex];
+                        var artNumber = String(artboardIndex + 1);
+                        if (artNumber.length == 1) artNumber = "0" + artNumber;
+                        var exportName = docName + "-art" + artNumber;
+
+                        // Outline text trong artboard này
+                        var artboardRect = artboard.artboardRect;
+                        for (var ti = doc.textFrames.length - 1; ti >= 0; ti--) {
+                            try {
+                                var tf = doc.textFrames[ti];
+                                var tb = tf.geometricBounds;
+                                if (tb[0] < artboardRect[2] && tb[2] > artboardRect[0] &&
+                                    tb[1] > artboardRect[3] && tb[3] < artboardRect[1]) {
+                                    tf.createOutline();
+                                }
+                            } catch(e) {}
+                        }
+
+                        // Unite objects cùng màu
+                        uniteColorsOnArtboard(artboardIndex);
+
+                        // 1. Export PNG (RGB - 300 DPI)
+                        var pngFile = new File(docPath + "/" + exportName + ".png");
+                        var pngOptions = new ExportOptionsPNG24();
+                        pngOptions.artBoardClipping = true;
+                        pngOptions.transparency = false;
+                        pngOptions.antiAliasing = true;
+                        pngOptions.horizontalScale = 300;
+                        pngOptions.verticalScale = 300;
+                        doc.documentColorSpace = DocumentColorSpace.RGB;
+                        doc.exportFile(pngFile, ExportType.PNG24, pngOptions);
+
+                        // 2. Export PDF (CMYK - 300 DPI)
+                        doc.documentColorSpace = DocumentColorSpace.CMYK;
+                        var pdfFile = new File(docPath + "/" + exportName + ".pdf");
+                        var pdfOptions = new PDFSaveOptions();
+                        pdfOptions.compatibility = PDFCompatibility.ACROBAT5;
+                        pdfOptions.preserveEditability = false;
+                        pdfOptions.generateThumbnails = false;
+                        pdfOptions.colorDownsampling = 300;
+                        pdfOptions.colorDownsamplingMethod = DownsampleMethod.BICUBICDOWNSAMPLE;
+                        pdfOptions.colorDownsamplingImageThreshold = 450;
+                        pdfOptions.grayscaleDownsampling = 300;
+                        pdfOptions.grayscaleDownsamplingMethod = DownsampleMethod.BICUBICDOWNSAMPLE;
+                        pdfOptions.grayscaleDownsamplingImageThreshold = 450;
+                        pdfOptions.artboardRange = String(artboardIndex + 1);
+                        pdfOptions.fontSubsetThreshold = 100;
+                        doc.saveAs(pdfFile, pdfOptions);
+
+                        successCount++;
+                        var pngSize = pngFile.exists ? (pngFile.length / 1024 / 1024).toFixed(2) : "0";
+                        var pdfSize = pdfFile.exists ? (pdfFile.length / 1024 / 1024).toFixed(2) : "0";
+                        exportedFiles.push({
+                            name: exportName,
+                            pngSize: pngSize,
+                            pdfSize: pdfSize
+                        });
+                    } catch(e) {
+                        failCount++;
+                    }
                 }
             }
 
@@ -953,13 +1054,22 @@ $._PannelTC = $._PannelTC || {};
                 app.open(originalFile);
             } catch(e) {}
 
+            var msg = "";
+            if (scope === 'current') {
+                msg = "Xuất bản thành công Artboard hiện tại (PNG + PDF 300 DPI).";
+            } else if (exportMode === 'single') {
+                msg = "Xuất bản thành công vào 1 file chung: " + totalArtboards + " Artboards (1 PDF đa trang & 1 PNG tổng 300 DPI).";
+            } else {
+                msg = "Xuất bản thành công " + successCount + " Artboard tách riêng từng file (PNG + PDF 300 DPI)." + (failCount ? " (Lỗi " + failCount + " artboard)" : "");
+            }
+
             return P._reply({
                 success: true,
                 successCount: successCount,
                 failCount: failCount,
                 folder: docPath.fsName,
                 files: exportedFiles,
-                message: "Xuất bản thành công: " + successCount + " Artboard (PNG + PDF 300 DPI)."
+                message: msg
             });
         } catch (err) {
             return P._error(err);

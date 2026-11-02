@@ -315,21 +315,63 @@
   // ------------------------------------------------------------------
   // 4. Xuất bản file in (Export Artboard sang PNG + PDF)
   // ------------------------------------------------------------------
+  var modeSingleRadio = document.getElementById('export-mode-single');
+  var modeSeparateRadio = document.getElementById('export-mode-separate');
+  var exportAllBtnText = document.getElementById('export-all-btn-text');
+
+  function getExportMode() {
+    return (modeSingleRadio && modeSingleRadio.checked) ? 'single' : 'separate';
+  }
+
+  function updateExportBtnLabel() {
+    var mode = getExportMode();
+    if (exportAllBtnText) {
+      exportAllBtnText.textContent = (mode === 'single') ? 'Xuất vào 1 file chung' : 'Xuất tách từng file riêng';
+    }
+  }
+
+  try {
+    var savedExportMode = localStorage.getItem('pannel_tc_export_mode');
+    if (savedExportMode === 'separate' && modeSeparateRadio) {
+      modeSeparateRadio.checked = true;
+    } else if (modeSingleRadio) {
+      modeSingleRadio.checked = true;
+    }
+  } catch(e) {}
+  updateExportBtnLabel();
+
+  if (modeSingleRadio) {
+    modeSingleRadio.addEventListener('change', function () {
+      updateExportBtnLabel();
+      try { localStorage.setItem('pannel_tc_export_mode', 'single'); } catch(e) {}
+    });
+  }
+  if (modeSeparateRadio) {
+    modeSeparateRadio.addEventListener('change', function () {
+      updateExportBtnLabel();
+      try { localStorage.setItem('pannel_tc_export_mode', 'separate'); } catch(e) {}
+    });
+  }
+
   function doExportArtboard(scope, btn) {
+    var mode = getExportMode();
     if (btn) btn.disabled = true;
-    var originalText = btn ? btn.textContent : '';
+    var originalText = btn ? btn.innerHTML : '';
     if (btn) btn.textContent = 'Đang xuất…';
 
-    log('Bắt đầu quy trình xuất bản file in (' + (scope === 'all' ? 'Tất cả Artboards' : 'Artboard hiện tại') + ')…');
+    var scopeDesc = (scope === 'current') ? 'Artboard hiện tại' :
+      (mode === 'single' ? 'Tất cả Artboards vào 1 file chung' : 'Mỗi Artboard là 1 file độc lập');
+    log('Bắt đầu quy trình xuất bản file in (' + scopeDesc + ')…');
 
-    window.TCBridge.call('exportArtboards', [scope], function (err, res) {
+    window.TCBridge.call('exportArtboards', [scope, mode], function (err, res) {
       if (btn) {
         btn.disabled = false;
-        btn.textContent = originalText;
+        btn.innerHTML = originalText;
       }
 
       if (err) {
         log('Lỗi xuất bản: ' + err.message, true);
+        alert(err.message);
         return;
       }
 

@@ -1,7 +1,7 @@
 {
-  "version": "1.4.3",
+  "version": "1.4.4",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
-  "releaseDate": "2026-10-24",
-  "changelog": "Bản v1.4.3: Nâng cấp công cụ ghi kích thước thành 3 chức năng chuyên biệt: (1) Kích thước tổng đối tượng, (2) Kích thước từng Group cha, (3) Group cha con lồng nhau."
+  "releaseDate": "2026-11-02",
+  "changelog": "Bản v1.4.4: Bổ sung 2 tùy chọn xuất bản file in: (1) Xuất tất cả Artboard vào 1 file chung (PDF đa trang & PNG tổng), (2) Xuất mỗi Artboard là 1 file độc lập."
 }

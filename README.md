@@ -60,10 +60,13 @@ PannelTC/
 - **Tùy chỉnh thông số**: Đơn vị (`mm`/`cm`), số lẻ, khoảng cách cách vật, cỡ chữ, độ dày nét, màu sắc, tính viền stroke...
 
 ### 📦 4. Xuất Bản File In (Export Artboards)
-- Tự động convert text sang outlines, unite đối tượng cùng màu.
-- Tùy chọn **"Tất cả Artboards"** hoặc **"Chỉ Artboard này"**.
-- Xuất song song file **PNG (RGB - 300 DPI)** và **PDF (CMYK - 300 DPI)** cho từng artboard độc lập.
-- Bảo toàn tuyệt đối file thiết kế gốc (tự động đóng tài liệu biến đổi và mở lại file gốc).
+- Tự động convert text sang outlines, unite đối tượng cùng màu chuẩn file in xưởng.
+- Xuất song song file **PNG (RGB - 300 DPI)** và **PDF (CMYK - 300 DPI)**.
+- **2 Tùy chọn xuất linh hoạt**:
+  1. **1. Xuất tất cả Artboard vào 1 file**: Gom toàn bộ artboards vào **1 file PDF đa trang (multi-page)** và **1 file PNG tổng hợp toàn bộ** (hệ thống tự động tính khung bao phủ bì và giới hạn an toàn pixel).
+  2. **2. Xuất mỗi Artboard là 1 file độc lập**: Tách riêng từng artboard thành các file độc lập (`-art01`, `-art02`...).
+- Tùy chọn **"Chỉ Artboard này"**: Chỉ xuất nhanh artboard đang được chọn.
+- Bảo toàn tuyệt đối file thiết kế gốc (tự động đóng tài liệu biến đổi và mở lại file gốc nguyên vẹn).
 
 ### 🔤 5. Đổi Chữ Theo Danh Sách (Data Merge / Variable)
 - Giải pháp thay thế hoàn hảo, nhanh gấp 10 lần so với công cụ Variable XML phức tạp của Illustrator.

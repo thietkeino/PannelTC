@@ -92,12 +92,22 @@
           } else if (method === 'runDTFAutoNest') {
             callback(null, { success: true, message: 'Mô phỏng khởi chạy Dàn trang DTF A3.' });
           } else if (method === 'exportArtboards') {
+            var scope = (args && args[0]) || 'all';
+            var mode = (args && args[1]) || 'single';
+            var msg = (scope === 'current') ?
+              'Mô phỏng xuất bản Artboard hiện tại (PNG + PDF 300 DPI).' :
+              (mode === 'single' ?
+                'Mô phỏng xuất bản tất cả Artboards vào 1 file chung (1 PDF đa trang & 1 PNG tổng 300 DPI).' :
+                'Mô phỏng xuất bản tách riêng từng Artboard (PNG + PDF 300 DPI).');
             callback(null, {
               success: true,
               successCount: 2,
               failCount: 0,
               folder: 'D:/Demo/Export',
-              message: 'Mô phỏng xuất bản 2 artboards (PNG + PDF 300 DPI).'
+              files: [
+                { name: 'Document_Demo' + (scope === 'current' ? '-art01' : (mode === 'single' ? '-all' : '-art01')), pngSize: '2.4', pdfSize: '1.2' }
+              ],
+              message: msg
             });
           } else if (method === 'runExportArtboardScript') {
             callback(null, { success: true, message: 'Mô phỏng chạy script ExportArtboard.jsx.' });

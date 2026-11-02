@@ -17,7 +17,7 @@
           <span class="tagline">Adobe Illustrator 2024</span>
         </div>
       </div>
-      <div class="version-pill" id="panel-version-pill">v1.4.3</div>
+      <div class="version-pill" id="panel-version-pill">v1.4.4</div>
     </header>
 
     <!-- Banner thông báo cập nhật (Tự động hiện khi có bản mới trên GitHub) -->
@@ -282,9 +282,28 @@
       </div>
 
       <div class="card-body">
-        <div class="export-action-row">
-          <button id="export-all-artboards-btn" class="btn btn-export" type="button" style="flex: 1;" title="Export toàn bộ Artboard">
-            Tất cả Artboards
+        <!-- 2 Tùy chọn kiểu xuất file in -->
+        <div class="export-options-box">
+          <label class="export-radio-label" for="export-mode-single">
+            <input type="radio" id="export-mode-single" name="export-artboard-mode" value="single" checked>
+            <div class="export-radio-text">
+              <strong>1. Xuất tất cả Artboard vào 1 file</strong>
+              <small>1 file PDF đa trang & 1 file PNG tổng</small>
+            </div>
+          </label>
+          <label class="export-radio-label" for="export-mode-separate">
+            <input type="radio" id="export-mode-separate" name="export-artboard-mode" value="separate">
+            <div class="export-radio-text">
+              <strong>2. Xuất mỗi Artboard là 1 file độc lập</strong>
+              <small>Tách riêng từng file: art01, art02...</small>
+            </div>
+          </label>
+        </div>
+
+        <div class="export-action-row" style="margin-top: 8px;">
+          <button id="export-all-artboards-btn" class="btn btn-export" type="button" style="flex: 2;" title="Xuất toàn bộ Artboards theo tùy chọn đã chọn ở trên">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span id="export-all-btn-text">Xuất vào 1 file chung</span>
           </button>
           <button id="export-cur-artboard-btn" class="btn btn-secondary" type="button" style="flex: 1;" title="Chỉ export Artboard hiện tại">
             Chỉ Artboard này
@@ -296,7 +315,7 @@
             Mở thư mục file in (Windows Explorer)
           </button>
         </div>
-        <p class="card-desc">Tự động convert text, unite màu, xuất PNG (RGB) và PDF (CMYK) tách riêng từng artboard</p>
+        <p class="card-desc">Tự động convert text, unite màu, xuất PNG (RGB - 300 DPI) & PDF (CMYK - 300 DPI)</p>
       </div>
     </section>
 
