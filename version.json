@@ -1,7 +1,7 @@
 {
-  "version": "1.5.1",
+  "version": "1.5.2",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
   "releaseDate": "2026-11-11",
-  "changelog": "Bản v1.5.1: Bổ sung tính năng Xuất file JPG theo danh sách (Save for Web sắc nét 100%, Max 3000px, tên file đặt theo nội dung thay thế); hoàn thiện phân tách mở Windows Explorer và nút tải lại F5/Reload."
+  "changelog": "Bản v1.5.2: Nâng cấp tính năng Xuất file JPG theo danh sách xuất toàn bộ Artboard chứa mẫu thiết kế (Save for Web sắc nét 100%, Max 3000px, tên file đặt theo nội dung thay thế, giữ nguyên nội dung gốc sau khi xuất)."
 }
