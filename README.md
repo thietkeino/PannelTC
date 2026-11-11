@@ -78,8 +78,10 @@ PannelTC/
      - **Tải file CSV mẫu**: Bấm nút `📥 Tải file CSV mẫu` để tải file CSV có sẵn tiêu đề các cột tương ứng với mẫu thiết kế (hỗ trợ tiếng Việt UTF-8 BOM chuẩn cho Excel).
      - **Tải lên file CSV**: Điền danh sách vào file CSV rồi bấm `📤 Tải lên file CSV` (hệ thống tự động đọc và nạp vào danh sách).
      - **Hoặc dán trực tiếp**: Copy trực tiếp các cột từ Excel rồi paste vào ô danh sách.
-  5. Chọn **Số cột dàn lưới** (ví dụ: 2 cột, 3 cột...). Hệ thống **tự động tính toán giãn cách 10mm** giữa các cột và hàng dựa trên kích thước thật của chữ mới, hoàn toàn không bị dính đè nhau.
-  6. Bấm **"Tạo Danh Sách Tự Động"**: Hệ thống tự động nhân bản, đổi chữ chính xác theo từng cột và xếp lưới ngay ngắn!
+  5. **Chọn 1 trong 2 tùy chọn đầu ra (Output)**:
+     - **Dàn trực tiếp trên Artboard (Lưới Vector)**: Chọn số cột (ví dụ 2 cột, 3 cột...), hệ thống tự động tính toán giãn cách 10mm giữa các cột và hàng dựa trên kích thước thật của chữ mới, gom group và giữ master.
+     - **Xuất file Ảnh JPG chất lượng cao (Save for Web)**: Xuất mỗi dòng danh sách thành một file ảnh JPG sắc nét chất lượng cao 100% (Save for Web), tự động tính toán tỉ lệ với cạnh lớn nhất tối đa 3000px, nền trắng sạch sẽ. File được lưu vào thư mục riêng `[TenFile]_JPG_Export` và hỗ trợ nút bấm mở nhanh thư mục ngay trên panel.
+  6. Bấm nút thực hiện: **"Tạo Danh Sách Trên Artboard"** hoặc **"Xuất Hàng Loạt File Ảnh JPG (Max 3000px)"**.
 
 ### 📂 6. Mở Nhanh Thư Mục Dự Án (Windows Explorer)
 - Mở trực tiếp thư mục bằng Windows Explorer với 1 click chuột (không tốn RAM, 0% CPU, chạy qua tiến trình native của Windows):

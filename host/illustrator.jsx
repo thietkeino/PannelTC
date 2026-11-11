@@ -1228,7 +1228,130 @@ $._PannelTC = $._PannelTC || {};
             var createGroup = (opts.createGroup !== false);
             var keepMaster = (opts.keepMaster !== false);
             var mappings = opts.mappings || [];
+            var outputType = opts.outputType || 'canvas';
 
+            // =========================================================
+            // CHẾ ĐỘ 1: XUẤT FILE ẢNH CHẤT LƯỢNG CAO (SAVE FOR WEB JPG - MAX 3000PX)
+            // =========================================================
+            if (outputType === 'export_jpg') {
+                var docFolder = null;
+                try {
+                    docFolder = doc.path;
+                } catch (ePath) {
+                    throw new Error("Vui lòng bấm Ctrl + S để lưu file Illustrator trước khi xuất ảnh hàng loạt!");
+                }
+                var baseDocName = doc.name.replace(/\.[^\.]+$/, "");
+                var exportFolder = new Folder(docFolder.fsName + "/" + baseDocName + "_JPG_Export");
+                if (!exportFolder.exists) {
+                    exportFolder.create();
+                }
+
+                var exportedCount = 0;
+                for (var j = 0; j < items.length; j++) {
+                    var rawL = items[j];
+                    if (typeof rawL !== 'string') continue;
+                    var trimmedL = rawL.replace(/^\s+|\s+$/g, '');
+                    if (trimmedL.length === 0) continue;
+
+                    var copyJpgItem = masterItem.duplicate();
+
+                    var copyTfsJpg = _collectTextFrames(copyJpgItem);
+                    copyTfsJpg.sort(function (a, b) {
+                        var dy = Math.abs(b.top - a.top);
+                        if (dy > 4) return b.top - a.top;
+                        return a.left - b.left;
+                    });
+
+                    var lineTokens = [];
+                    if (trimmedL.indexOf('\t') !== -1) {
+                        lineTokens = trimmedL.split('\t');
+                    } else if (trimmedL.indexOf(';') !== -1) {
+                        lineTokens = trimmedL.split(';');
+                    } else if (copyTfsJpg.length > 1 && trimmedL.indexOf(',') !== -1) {
+                        lineTokens = trimmedL.split(',');
+                    } else {
+                        lineTokens = [trimmedL];
+                    }
+
+                    var firstColText = "";
+                    for (var tj = 0; tj < copyTfsJpg.length; tj++) {
+                        var cTarget = (tj < mappings.length) ? parseInt(mappings[tj], 10) : (tj + 1);
+                        if (cTarget > 0) {
+                            var tIdxTok = cTarget - 1;
+                            if (tIdxTok < lineTokens.length) {
+                                var valText = lineTokens[tIdxTok].replace(/^\s+|\s+$/g, '');
+                                if (!firstColText && valText) firstColText = valText;
+                                try {
+                                    copyTfsJpg[tj].contents = valText;
+                                } catch (eSetT) {}
+                            } else {
+                                try {
+                                    copyTfsJpg[tj].contents = "";
+                                } catch (eSetB) {}
+                            }
+                        }
+                    }
+
+                    // Đặt tên file: 01_TenGiaTri.jpg
+                    var safeName = (firstColText || ("Item_" + (j + 1)))
+                        .replace(/[\r\n\\\/:\*\?"<>\|]/g, "_")
+                        .replace(/\s+/g, "_")
+                        .substring(0, 50);
+                    var numPrefix = (j + 1 < 10 ? "0" : "") + (j + 1);
+                    var destJpgFile = new File(exportFolder.fsName + "/" + numPrefix + "_" + safeName + ".jpg");
+
+                    // Bọc artboard tạm quanh copyJpgItem
+                    var curBoundsJpg = copyJpgItem.visibleBounds; // [left, top, right, bottom]
+                    var boundW = Math.abs(curBoundsJpg[2] - curBoundsJpg[0]);
+                    var boundH = Math.abs(curBoundsJpg[1] - curBoundsJpg[3]);
+                    if (boundW <= 0) boundW = 10;
+                    if (boundH <= 0) boundH = 10;
+
+                    var tempArtboard = doc.artboards.add([curBoundsJpg[0], curBoundsJpg[1], curBoundsJpg[2], curBoundsJpg[3]]);
+                    var tempAbIdx = doc.artboards.length - 1;
+                    doc.artboards.setActiveArtboardIndex(tempAbIdx);
+
+                    // Thiết lập xuất JPG sắc nét chất lượng cao (Save for Web)
+                    var jpgExportOpts = new ExportOptionsJPEG();
+                    jpgExportOpts.antiAliasing = true;
+                    jpgExportOpts.artBoardClipping = true;
+                    jpgExportOpts.qualitySetting = 100; // Chất lượng cao nhất 100%
+                    jpgExportOpts.optimization = true;  // Baseline tối ưu hóa hiển thị web
+                    jpgExportOpts.matte = true;
+                    var whiteCol = new RGBColor();
+                    whiteCol.red = 255;
+                    whiteCol.green = 255;
+                    whiteCol.blue = 255;
+                    jpgExportOpts.matteColor = whiteCol;
+
+                    // Tính toán tỉ lệ scale sao cho kích thước lớn nhất tối đa 3000px
+                    var maxSidePt = Math.max(boundW, boundH);
+                    var targetScalePct = (3000.0 / maxSidePt) * 100.0;
+                    if (targetScalePct > 776.0) targetScalePct = 776.0; // Giới hạn an toàn của Illustrator
+                    if (targetScalePct < 1.0) targetScalePct = 1.0;
+                    jpgExportOpts.horizontalScale = targetScalePct;
+                    jpgExportOpts.verticalScale = targetScalePct;
+
+                    // Xuất file và dọn dẹp để canvas luôn sạch
+                    doc.exportFile(destJpgFile, ExportType.JPEG, jpgExportOpts);
+                    exportedCount++;
+
+                    tempArtboard.remove();
+                    copyJpgItem.remove();
+                }
+
+                return P._reply({
+                    success: true,
+                    outputType: 'export_jpg',
+                    count: exportedCount,
+                    folder: exportFolder.fsName,
+                    message: "Đã xuất thành công " + exportedCount + " file ảnh JPG chất lượng cao (Max 3000px, Save for Web) vào: " + exportFolder.fsName
+                });
+            }
+
+            // =========================================================
+            // CHẾ ĐỘ 2: DÀN TRỰC TIẾP TRÊN ARTBOARD (LƯỚI VECTOR CÁCH 10MM)
+            // =========================================================
             // Tạo group tổng nếu được chọn
             var containerGroup = null;
             if (createGroup) {

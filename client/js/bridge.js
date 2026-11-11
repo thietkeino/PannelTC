@@ -22,14 +22,20 @@
     openExplorer: true
   };
 
-  // Tự động đồng bộ đường dẫn Extension từ Adobe CEP sang Illustrator ExtendScript
+  // Tự động đồng bộ đường dẫn Extension và nạp script JSX mới nhất từ đĩa
   function syncExtensionPath() {
     if (cep && typeof cep.getSystemPath === 'function') {
       try {
         var extPath = cep.getSystemPath('extension') || '';
         if (extPath) {
           var safePath = extPath.replace(/\\/g, '/').replace(/\/+$/, '');
-          cep.evalScript('if ($._PannelTC && $._PannelTC.setExtensionPath) { $._PannelTC.setExtensionPath(' + JSON.stringify(safePath) + '); }');
+          var jsxFile = safePath + '/host/illustrator.jsx';
+          var jsxCode = '(function(){ try { ' +
+            'var f = new File(' + JSON.stringify(jsxFile) + '); ' +
+            'if (f.exists) { $.evalFile(f); } ' +
+            'if ($._PannelTC && $._PannelTC.setExtensionPath) { $._PannelTC.setExtensionPath(' + JSON.stringify(safePath) + '); } ' +
+            'return "OK"; } catch(e){ return e.toString(); } })()';
+          cep.evalScript(jsxCode);
         }
       } catch (eSync) {}
     }

@@ -1,7 +1,7 @@
 {
-  "version": "1.4.4",
+  "version": "1.5.0",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
-  "releaseDate": "2026-11-02",
-  "changelog": "Bản v1.4.4: Bổ sung 2 tùy chọn xuất bản file in: (1) Xuất tất cả Artboard vào 1 file chung (PDF đa trang & PNG tổng), (2) Xuất mỗi Artboard là 1 file độc lập."
+  "releaseDate": "2026-11-11",
+  "changelog": "Bản v1.5.0: Nâng cấp Đổi chữ theo danh sách với tính năng xuất hàng loạt file ảnh JPG sắc nét chất lượng cao (Save for Web 100%, Max 3000px); hỗ trợ phím F5 / nút Reload tải lại toàn bộ panel và đồng bộ ExtendScript tức thì."
 }

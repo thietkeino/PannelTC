@@ -45,6 +45,13 @@
   var varCreateGroupEl = document.getElementById('var-create-group');
   var varKeepMasterEl = document.getElementById('var-keep-master');
   var varGenerateBtn = document.getElementById('var-generate-btn');
+  var varModeCanvasRadio = document.getElementById('var-mode-canvas');
+  var varModeJpgRadio = document.getElementById('var-mode-jpg');
+  var varCanvasConfig = document.getElementById('var-canvas-config');
+  var varJpgConfig = document.getElementById('var-jpg-config');
+  var varExportJpgBtn = document.getElementById('var-export-jpg-btn');
+  var varOpenFolderRow = document.getElementById('var-open-folder-row');
+  var varOpenFolderBtn = document.getElementById('var-open-folder-btn');
 
   function log(msg, isError) {
     if (!consoleBox) return;
@@ -438,6 +445,13 @@
   var varCreateGroupEl = document.getElementById('var-create-group');
   var varKeepMasterEl = document.getElementById('var-keep-master');
   var varGenerateBtn = document.getElementById('var-generate-btn');
+  var varModeCanvasRadio = document.getElementById('var-mode-canvas');
+  var varModeJpgRadio = document.getElementById('var-mode-jpg');
+  var varCanvasConfig = document.getElementById('var-canvas-config');
+  var varJpgConfig = document.getElementById('var-jpg-config');
+  var varExportJpgBtn = document.getElementById('var-export-jpg-btn');
+  var varOpenFolderRow = document.getElementById('var-open-folder-row');
+  var varOpenFolderBtn = document.getElementById('var-open-folder-btn');
 
   var currentVariableFields = [];
 
@@ -828,6 +842,86 @@
     });
   }
 
+  // Chuyển đổi qua lại giữa chế độ Dàn lưới trên Artboard và Xuất ảnh JPG Save for Web
+  function switchVariableMode() {
+    var isJpg = varModeJpgRadio && varModeJpgRadio.checked;
+    if (varCanvasConfig) varCanvasConfig.style.display = isJpg ? 'none' : 'block';
+    if (varJpgConfig) varJpgConfig.style.display = isJpg ? 'block' : 'none';
+  }
+
+  if (varModeCanvasRadio) varModeCanvasRadio.addEventListener('change', switchVariableMode);
+  if (varModeJpgRadio) varModeJpgRadio.addEventListener('change', switchVariableMode);
+
+  // Xuất hàng loạt file ảnh JPG chất lượng cao (Save for Web - Max 3000px)
+  if (varExportJpgBtn) {
+    varExportJpgBtn.addEventListener('click', function () {
+      if (!varInputList) return;
+      var lines = varInputList.value.split('\n').filter(function (l) {
+        return l.trim().length > 0;
+      });
+
+      if (lines.length === 0) {
+        log('Vui lòng nhập hoặc paste ít nhất 1 dòng văn bản vào danh sách trước khi xuất ảnh!', true);
+        alert('Vui lòng paste danh sách dữ liệu từ Excel vào ô nhập!');
+        varInputList.focus();
+        return;
+      }
+
+      var selects = varFieldsList ? varFieldsList.querySelectorAll('.field-select') : [];
+      var mappings = [];
+      for (var s = 0; s < selects.length; s++) {
+        mappings.push(parseInt(selects[s].value, 10));
+      }
+
+      var opts = {
+        outputType: 'export_jpg',
+        items: lines,
+        mappings: mappings
+      };
+
+      varExportJpgBtn.disabled = true;
+      var origBtnHtml = varExportJpgBtn.innerHTML;
+      varExportJpgBtn.textContent = 'Đang xuất ' + lines.length + ' file JPG…';
+      log('Đang xuất ' + lines.length + ' file ảnh JPG chất lượng cao (Save for Web, Max 3000px)…');
+
+      window.TCBridge.call('generateFromList', [opts], function (err, res) {
+        varExportJpgBtn.disabled = false;
+        varExportJpgBtn.innerHTML = origBtnHtml;
+
+        if (err) {
+          log('Lỗi xuất ảnh JPG: ' + err.message, true);
+          alert(err.message);
+          return;
+        }
+
+        window._lastJpgExportFolder = res.folder || '';
+        log(res.message || ('Đã xuất thành công ' + lines.length + ' file ảnh JPG.'));
+
+        if (varOpenFolderRow) {
+          varOpenFolderRow.style.display = 'block';
+        }
+
+        if (res.folder) {
+          launchExplorerForeground(res.folder, function () {
+            log('Đã mở thư mục ảnh JPG trên Windows Explorer: ' + res.folder);
+          });
+        }
+      });
+    });
+  }
+
+  if (varOpenFolderBtn) {
+    varOpenFolderBtn.addEventListener('click', function () {
+      if (window._lastJpgExportFolder) {
+        launchExplorerForeground(window._lastJpgExportFolder, function () {
+          log('Đã mở thư mục ảnh JPG: ' + window._lastJpgExportFolder);
+        });
+      } else {
+        openWindowsExplorer();
+      }
+    });
+  }
+
   // ------------------------------------------------------------------
   // 6. Mở Windows Explorer & Thư mục dự án (Luôn đưa cửa sổ lên tiền cảnh đè lên Illustrator)
   // ------------------------------------------------------------------
@@ -1064,14 +1158,31 @@
   }, 2500);
 
   // ------------------------------------------------------------------
-  // 8. Khởi tạo & Theme Listener
+  // 8. Khởi tạo, Làm mới (Reload) & Theme Listener
   // ------------------------------------------------------------------
   if (refreshBtn) {
     refreshBtn.addEventListener('click', function () {
-      fetchState();
-      log('Đã cập nhật trạng thái mới nhất.');
+      log('Đang làm mới & tải lại toàn bộ Pannel TC…');
+      try {
+        window.location.reload(true);
+      } catch (e) {
+        window.location.reload();
+      }
     });
   }
+
+  // Phím tắt F5 hoặc Ctrl + R để làm mới bảng điều khiển ngay lập tức
+  window.addEventListener('keydown', function (e) {
+    if (e.key === 'F5' || (e.ctrlKey && (e.key === 'r' || e.key === 'R'))) {
+      e.preventDefault();
+      log('Đang tải lại bảng điều khiển…');
+      try {
+        window.location.reload(true);
+      } catch (err) {
+        window.location.reload();
+      }
+    }
+  });
 
   window.TCBridge.onThemeChanged(function () {
     log('Đã đồng bộ lại giao diện Illustrator.');
