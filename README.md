@@ -80,7 +80,7 @@ PannelTC/
      - **Hoặc dán trực tiếp**: Copy trực tiếp các cột từ Excel rồi paste vào ô danh sách.
   5. **Chọn 1 trong 2 tùy chọn đầu ra (Output)**:
      - **Dàn trực tiếp trên Artboard (Lưới Vector)**: Chọn số cột (ví dụ 2 cột, 3 cột...), hệ thống tự động tính toán giãn cách 10mm giữa các cột và hàng dựa trên kích thước thật của chữ mới, gom group và giữ master.
-     - **Xuất file Ảnh JPG chất lượng cao (Save for Web)**: Xuất mỗi dòng danh sách thành một file ảnh JPG sắc nét chất lượng cao 100% (Save for Web), tự động tính toán tỉ lệ với cạnh lớn nhất tối đa 3000px, nền trắng sạch sẽ. File được lưu vào thư mục riêng `[TenFile]_JPG_Export` và hỗ trợ nút bấm mở nhanh thư mục ngay trên panel.
+     - **Xuất file Ảnh JPG chất lượng cao (Save for Web)**: Xuất mỗi dòng danh sách thành một file ảnh JPG sắc nét chất lượng cao 100% (chuẩn Save for Web tối ưu hóa), tự động tính toán tỉ lệ với cạnh lớn nhất tối đa 3000px, nền trắng sạch sẽ. Tên từng file ảnh được đặt tự động theo đúng nội dung chữ đã thay thế (tự động chuẩn hóa ký tự và chống trùng tên). File được lưu vào thư mục riêng `[TenFile]_JPG_Export` kèm nút mở thư mục nhanh ngay trên panel.
   6. Bấm nút thực hiện: **"Tạo Danh Sách Trên Artboard"** hoặc **"Xuất Hàng Loạt File Ảnh JPG (Max 3000px)"**.
 
 ### 📂 6. Mở Nhanh Thư Mục Dự Án (Windows Explorer)

@@ -1246,6 +1246,9 @@ $._PannelTC = $._PannelTC || {};
                     exportFolder.create();
                 }
 
+                // Ẩn tạm thời masterItem để không bị đè/lẫn hình vào artboard xuất JPG
+                try { masterItem.hidden = true; } catch (eH0) {}
+
                 var exportedCount = 0;
                 for (var j = 0; j < items.length; j++) {
                     var rawL = items[j];
@@ -1254,6 +1257,7 @@ $._PannelTC = $._PannelTC || {};
                     if (trimmedL.length === 0) continue;
 
                     var copyJpgItem = masterItem.duplicate();
+                    try { copyJpgItem.hidden = false; } catch (eH1) {}
 
                     var copyTfsJpg = _collectTextFrames(copyJpgItem);
                     copyTfsJpg.sort(function (a, b) {
@@ -1273,14 +1277,17 @@ $._PannelTC = $._PannelTC || {};
                         lineTokens = [trimmedL];
                     }
 
-                    var firstColText = "";
+                    // Thu thập toàn bộ nội dung text được thay thế của từng cột để đặt tên file
+                    var replacedValues = [];
                     for (var tj = 0; tj < copyTfsJpg.length; tj++) {
                         var cTarget = (tj < mappings.length) ? parseInt(mappings[tj], 10) : (tj + 1);
                         if (cTarget > 0) {
                             var tIdxTok = cTarget - 1;
                             if (tIdxTok < lineTokens.length) {
                                 var valText = lineTokens[tIdxTok].replace(/^\s+|\s+$/g, '');
-                                if (!firstColText && valText) firstColText = valText;
+                                if (valText.length > 0) {
+                                    replacedValues.push(valText);
+                                }
                                 try {
                                     copyTfsJpg[tj].contents = valText;
                                 } catch (eSetT) {}
@@ -1292,13 +1299,24 @@ $._PannelTC = $._PannelTC || {};
                         }
                     }
 
-                    // Đặt tên file: 01_TenGiaTri.jpg
-                    var safeName = (firstColText || ("Item_" + (j + 1)))
+                    // Đặt tên file theo đúng nội dung đã được thay thế (Chuẩn hóa ký tự Windows, giữ dấu cách đẹp)
+                    var nameCandidate = replacedValues.length > 0 ? replacedValues.join(' - ') : ("Item_" + (j + 1));
+                    var safeName = nameCandidate
                         .replace(/[\r\n\\\/:\*\?"<>\|]/g, "_")
-                        .replace(/\s+/g, "_")
-                        .substring(0, 50);
-                    var numPrefix = (j + 1 < 10 ? "0" : "") + (j + 1);
-                    var destJpgFile = new File(exportFolder.fsName + "/" + numPrefix + "_" + safeName + ".jpg");
+                        .replace(/\s+/g, " ")
+                        .replace(/^\s+|\s+$/g, "")
+                        .substring(0, 80);
+                    if (!safeName || safeName.length === 0) {
+                        safeName = "Item_" + (j + 1);
+                    }
+
+                    // Chống ghi đè nếu danh sách có nhiều dòng cùng nội dung (tự động thêm _1, _2...)
+                    var destJpgFile = new File(exportFolder.fsName + "/" + safeName + ".jpg");
+                    var collisionCounter = 1;
+                    while (destJpgFile.exists) {
+                        destJpgFile = new File(exportFolder.fsName + "/" + safeName + "_" + collisionCounter + ".jpg");
+                        collisionCounter++;
+                    }
 
                     // Bọc artboard tạm quanh copyJpgItem
                     var curBoundsJpg = copyJpgItem.visibleBounds; // [left, top, right, bottom]
@@ -1316,29 +1334,46 @@ $._PannelTC = $._PannelTC || {};
                     jpgExportOpts.antiAliasing = true;
                     jpgExportOpts.artBoardClipping = true;
                     jpgExportOpts.qualitySetting = 100; // Chất lượng cao nhất 100%
-                    jpgExportOpts.optimization = true;  // Baseline tối ưu hóa hiển thị web
+                    jpgExportOpts.optimization = true;  // Baseline tối ưu hóa chuẩn Save for Web
                     jpgExportOpts.matte = true;
                     var whiteCol = new RGBColor();
                     whiteCol.red = 255;
                     whiteCol.green = 255;
                     whiteCol.blue = 255;
-                    jpgExportOpts.matteColor = whiteCol;
+                    jpgExportOpts.matteColor = whiteCol; // Nền trắng sạch sẽ không bị viền đen
 
                     // Tính toán tỉ lệ scale sao cho kích thước lớn nhất tối đa 3000px
                     var maxSidePt = Math.max(boundW, boundH);
                     var targetScalePct = (3000.0 / maxSidePt) * 100.0;
-                    if (targetScalePct > 776.0) targetScalePct = 776.0; // Giới hạn an toàn của Illustrator
+                    if (targetScalePct > 776.0) targetScalePct = 776.0; // Giới hạn an toàn của Illustrator ExtendScript
                     if (targetScalePct < 1.0) targetScalePct = 1.0;
                     jpgExportOpts.horizontalScale = targetScalePct;
                     jpgExportOpts.verticalScale = targetScalePct;
 
-                    // Xuất file và dọn dẹp để canvas luôn sạch
+                    // Xuất file ảnh
                     doc.exportFile(destJpgFile, ExportType.JPEG, jpgExportOpts);
+
+                    // Kiểm tra nếu Illustrator tự gắn thêm hậu tố tên Artboard (_Artboard...) thì đổi tên về đúng tên mong muốn
+                    if (!destJpgFile.exists) {
+                        var basePattern = destJpgFile.name.replace(/\.jpg$/i, "");
+                        var createdFiles = exportFolder.getFiles(function (f) {
+                            return (f instanceof File) && (f.name.indexOf(basePattern) === 0) && (/\.jpg$/i.test(f.name));
+                        });
+                        if (createdFiles && createdFiles.length > 0) {
+                            try {
+                                createdFiles[0].rename(destJpgFile.name);
+                            } catch (eRen) {}
+                        }
+                    }
+
                     exportedCount++;
 
                     tempArtboard.remove();
                     copyJpgItem.remove();
                 }
+
+                // Hiện lại masterItem sau khi hoàn tất xuất ảnh
+                try { masterItem.hidden = false; } catch (eH2) {}
 
                 return P._reply({
                     success: true,
@@ -1515,6 +1550,9 @@ $._PannelTC = $._PannelTC || {};
                 message: "Đã tạo thành công " + totalCopies + " mẫu theo danh sách (giãn cách tự động 10mm)!"
             });
         } catch (err) {
+            if (masterItem) {
+                try { masterItem.hidden = false; } catch (eHRecover) {}
+            }
             return P._error(err);
         }
     };
