@@ -35,7 +35,12 @@
       try {
         var extPath = cep.getSystemPath('extension') || '';
         if (extPath) {
-          var safePath = extPath.replace(/\\/g, '/').replace(/\/+$/, '');
+          var safePath = extPath;
+          try { safePath = decodeURIComponent(safePath); } catch (eDec) {}
+          safePath = safePath.replace(/^file:[\\/]+/i, '').replace(/^file:/i, '').replace(/\\/g, '/');
+          safePath = safePath.replace(/^\/+([a-zA-Z]:)/, function (m, d) { return d; });
+          safePath = safePath.replace(/\/+$/, '');
+
           var jsxFile = safePath + '/host/illustrator.jsx';
           var jsxCode = '(function(){ try { ' +
             'var f = new File(' + JSON.stringify(jsxFile) + '); ' +

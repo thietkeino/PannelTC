@@ -1,7 +1,7 @@
 {
-  "version": "1.6.1",
+  "version": "1.6.2",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
   "releaseDate": "2026-11-12",
-  "changelog": "Bản v1.6.1: Nâng cấp tính năng Xem Dataset với 2 chế độ linh hoạt: (1) Dạng Danh Sách (bảng chi tiết kèm click xem nhanh dòng bất kỳ) và (2) Chuyển Dòng Trên Canvas (Live Navigator trực tiếp trên Artboard giống bảng Variable của Illustrator với các nút ⏮ ◀ Trước / Sau ▶ ⏭, dropdown chọn dòng và nút Khôi Phục Mẫu Gốc)."
+  "changelog": "Bản v1.6.2: Sửa triệt để lỗi 'Cannot find drive file' khi bấm Cập nhật Panel trên máy tính khác (loại bỏ hoàn toàn tiền tố file:/// do CEP trả về, chuyển sang robocopy và EncodedCommand an toàn)."
 }

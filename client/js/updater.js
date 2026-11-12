@@ -7,7 +7,7 @@
 
   var DEFAULT_REPO = 'thietkeino/PannelTC';
   var DEFAULT_BRANCH = 'main';
-  var FALLBACK_VERSION = '1.6.1';
+  var FALLBACK_VERSION = '1.6.2';
 
   // Helper so sánh 2 chuỗi phiên bản semver (ví dụ 1.4.2 > 1.4.0)
   function compareVersions(v1, v2) {
@@ -23,29 +23,63 @@
     return 0;
   }
 
+  // Chuẩn hóa và làm sạch đường dẫn thư mục thành đường dẫn Windows chuẩn
+  function cleanExtensionPath(raw) {
+    if (!raw) return '';
+    var p = String(raw).trim();
+    try {
+      p = decodeURIComponent(p);
+    } catch (e) {}
+
+    // Bỏ protocol file:/// hoặc file:// hoặc file:\ hoặc file:
+    p = p.replace(/^file:[\\/]+/i, '');
+    p = p.replace(/^file:/i, '');
+
+    // Đổi tất cả backslash sang forward slash
+    p = p.replace(/\\/g, '/');
+
+    // Bỏ slash ở đầu nếu đứng trước ổ đĩa (ví dụ /C:/Users -> C:/Users)
+    p = p.replace(/^\/+([a-zA-Z]:)/, function (match, drive) {
+      return drive;
+    });
+
+    // Bỏ trailing slash
+    p = p.replace(/\/+$/, '');
+
+    return p;
+  }
+
   // Xác định thư mục cài đặt gốc của Extension
   function getLocalExtensionPath() {
+    var raw = '';
     try {
       if (global.__adobe_cep__ && typeof global.__adobe_cep__.getSystemPath === 'function') {
-        var p = global.__adobe_cep__.getSystemPath('extension');
-        if (p) return p.replace(/\\/g, '/').replace(/\/+$/, '');
+        raw = global.__adobe_cep__.getSystemPath('extension') || '';
       }
-      if (typeof global.CSInterface !== 'undefined') {
+      if (!raw && typeof global.CSInterface !== 'undefined') {
         var csi = new global.CSInterface();
-        var p2 = csi.getSystemPath('extension');
-        if (p2) return p2.replace(/\\/g, '/').replace(/\/+$/, '');
+        raw = csi.getSystemPath('extension') || '';
       }
     } catch (e) {}
 
-    try {
-      var cpNode = (global.cep_node && global.cep_node.require) ? global.cep_node.require : (typeof require === 'function' ? require : null);
-      if (cpNode) {
-        var pathMod = cpNode('path');
-        return pathMod.resolve(__dirname, '..', '..').replace(/\\/g, '/');
-      }
-    } catch (eNode) {}
+    if (!raw) {
+      try {
+        var cpNode = (global.cep_node && global.cep_node.require) ? global.cep_node.require : (typeof require === 'function' ? require : null);
+        if (cpNode) {
+          var pathMod = cpNode('path');
+          raw = pathMod.resolve(__dirname, '..', '..');
+        }
+      } catch (eNode) {}
+    }
 
-    return '';
+    if (!raw && global.location && global.location.href) {
+      try {
+        var href = global.location.pathname || global.location.href;
+        raw = href.replace(/[\/\\]client[\/\\]index\.html.*$/i, '');
+      } catch (eHref) {}
+    }
+
+    return cleanExtensionPath(raw);
   }
 
   // Tự động đọc phiên bản thật đang cài trên máy từ file version.json
@@ -233,39 +267,67 @@
 
       progressCb('Đang tải và cài đặt bản cập nhật từ GitHub…');
 
-      var cleanExtPath = extPath.replace(/\//g, '\\').replace(/\\+$/, '');
+      var cleanExtPath = cleanExtensionPath(extPath);
       var zipUrl = downloadUrl;
       var token = this.getToken();
 
-      // Script PowerShell tải zip, giải nén và copy đè tệp
-      var psScript = [
+      // Script PowerShell tải zip, giải nén và ghi đè an toàn
+      var psLines = [
         '$ErrorActionPreference = "Stop"',
+        '$ProgressPreference = "SilentlyContinue"',
         '[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12',
         '$zipPath = Join-Path $env:TEMP "pannel_tc_update.zip"',
         '$extractPath = Join-Path $env:TEMP "pannel_tc_extracted"',
         '$targetPath = "' + cleanExtPath + '"',
-        'if (Test-Path $extractPath) { Remove-Item -Path $extractPath -Recurse -Force }',
+        '# Phòng ngừa triệt để nếu chuỗi vẫn còn sót prefix file:',
+        '$targetPath = $targetPath.Trim()',
+        '$targetPath = $targetPath -replace "^file:[\\\\/]*", ""',
+        '$targetPath = $targetPath -replace "^[\\\\/]+([a-zA-Z]:)", "`$1"',
+        '$targetPath = $targetPath -replace "/", "\\"',
+        'if (!(Test-Path $targetPath)) { New-Item -ItemType Directory -Path $targetPath -Force | Out-Null }',
+        'if (Test-Path $extractPath) { Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue }',
         '$client = New-Object Net.WebClient',
         '$client.Headers.Add("User-Agent", "PannelTC-Updater")',
         (token ? '$client.Headers.Add("Authorization", "Bearer ' + token + '")' : ''),
         '$client.DownloadFile("' + zipUrl + '", $zipPath)',
         'Expand-Archive -Path $zipPath -DestinationPath $extractPath -Force',
         '$sub = Get-ChildItem -Path $extractPath | Where-Object { $_.PSIsContainer } | Select-Object -First 1',
-        'if ($sub) {',
-        '    Copy-Item -Path (Join-Path $sub.FullName "*") -Destination $targetPath -Recurse -Force',
-        '} else {',
-        '    Copy-Item -Path (Join-Path $extractPath "*") -Destination $targetPath -Recurse -Force',
+        '$sourceDir = if ($sub) { $sub.FullName } else { $extractPath }',
+        'try {',
+        '    & robocopy $sourceDir $targetPath /E /IS /IT /NFL /NDL /NJH /NJS /NC /NS /NP | Out-Null',
+        '    if ($LASTEXITCODE -ge 8) { throw "Robocopy exit code $LASTEXITCODE" }',
+        '} catch {',
+        '    Get-ChildItem -Path $sourceDir -Force | ForEach-Object {',
+        '        Copy-Item -Path $_.FullName -Destination $targetPath -Recurse -Force',
+        '    }',
         '}',
         'Remove-Item -Path $zipPath -Force -ErrorAction SilentlyContinue',
         'Remove-Item -Path $extractPath -Recurse -Force -ErrorAction SilentlyContinue'
-      ].filter(function (s) { return s.length > 0; }).join('; ');
+      ];
 
-      var cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "' + psScript.replace(/"/g, '\\"') + '"';
+      var psScript = psLines.filter(function (s) { return s.length > 0; }).join("\r\n");
+
+      // Mã hóa UTF-16LE Base64 (-EncodedCommand) để chạy mượt mà, không bao giờ bị lỗi escape dấu ngoặc kép hay backslash
+      var b64Script = '';
+      try {
+        if (typeof Buffer !== 'undefined') {
+          b64Script = Buffer.from(psScript, 'utf16le').toString('base64');
+        }
+      } catch (eBuf) {}
+
+      var cmd = '';
+      if (b64Script) {
+        cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand ' + b64Script;
+      } else {
+        cmd = 'powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "' + psScript.replace(/"/g, '\\"') + '"';
+      }
 
       var self = this;
       childProcess.exec(cmd, { windowsHide: true }, function (err, stdout, stderr) {
         if (err) {
-          return completeCb(new Error('Lỗi cập nhật: ' + (stderr || err.message)));
+          var cleanErr = (stderr || err.message || '').replace(/#<\s*CLIXML[\s\S]*$/i, '').trim();
+          if (!cleanErr) cleanErr = err.message || 'Lỗi không xác định khi cập nhật';
+          return completeCb(new Error('Lỗi cập nhật: ' + cleanErr));
         }
         self.getVersion(); // Cập nhật lại số version mới từ file
         progressCb('Cập nhật hoàn tất! Đang khởi động lại panel…');
