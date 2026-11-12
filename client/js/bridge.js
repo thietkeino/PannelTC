@@ -18,6 +18,11 @@
     runExportArtboardScript: true,
     getVariableSelectionInfo: true,
     generateFromList: true,
+    prepareBatchJpg: true,
+    exportBatchJpgItem: true,
+    finishBatchJpg: true,
+    cancelBatchJpg: true,
+    setExportAbortFlag: true,
     openFolder: true,
     openExplorer: true
   };
@@ -139,6 +144,38 @@
               count: cnt,
               message: "Mô phỏng: Đã tạo " + cnt + " mẫu theo danh sách!"
             });
+          } else if (method === 'prepareBatchJpg') {
+            var totalCnt = (args[0] && args[0].items) ? args[0].items.length : 3;
+            callback(null, {
+              success: true,
+              total: totalCnt,
+              folder: 'D:/App/Dự án/In Ấn/Mock_JPG_Export',
+              targetArtboard: 'Artboard 1'
+            });
+          } else if (method === 'exportBatchJpgItem') {
+            callback(null, {
+              success: true,
+              itemIndex: args[0],
+              fileName: 'Mock_Item_' + ((args[0] || 0) + 1) + '.jpg',
+              exportedCount: (args[0] || 0) + 1
+            });
+          } else if (method === 'finishBatchJpg') {
+            callback(null, {
+              success: true,
+              count: 3,
+              folder: 'D:/App/Dự án/In Ấn/Mock_JPG_Export',
+              message: 'Mô phỏng: Đã xuất thành công toàn bộ ảnh JPG!'
+            });
+          } else if (method === 'cancelBatchJpg') {
+            callback(null, {
+              success: true,
+              cancelled: true,
+              count: 1,
+              folder: 'D:/App/Dự án/In Ấn/Mock_JPG_Export',
+              message: 'Mô phỏng: Đã dừng xuất bản theo yêu cầu.'
+            });
+          } else if (method === 'setExportAbortFlag') {
+            callback(null, { success: true });
           } else if (method === 'openFolder') {
             callback(null, {
               success: true,

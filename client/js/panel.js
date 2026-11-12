@@ -453,7 +453,176 @@
   var varOpenFolderRow = document.getElementById('var-open-folder-row');
   var varOpenFolderBtn = document.getElementById('var-open-folder-btn');
 
+  // Elements: View Dataset & Dừng xuất bản
+  var varViewDatasetBtn = document.getElementById('var-view-dataset-btn');
+  var varDatasetPreviewBox = document.getElementById('var-dataset-preview-box');
+  var varDatasetCloseBtn = document.getElementById('var-dataset-close-btn');
+  var varDatasetTable = document.getElementById('var-dataset-table');
+  var varDatasetThead = document.getElementById('var-dataset-thead');
+  var varDatasetTbody = document.getElementById('var-dataset-tbody');
+  var varDatasetRowBadge = document.getElementById('var-dataset-row-badge');
+
+  var varExportProgressBox = document.getElementById('var-export-progress-box');
+  var varExportProgressCounter = document.getElementById('var-export-progress-counter');
+  var varExportProgressBar = document.getElementById('var-export-progress-bar');
+  var varExportCurrentName = document.getElementById('var-export-current-name');
+  var varExportStopBtn = document.getElementById('var-export-stop-btn');
+
+  var varCanvasProgressBox = document.getElementById('var-canvas-progress-box');
+  var varCanvasProgressCounter = document.getElementById('var-canvas-progress-counter');
+  var varCanvasStopBtn = document.getElementById('var-canvas-stop-btn');
+
   var currentVariableFields = [];
+  var isJpgExporting = false;
+  var isJpgExportCancelled = false;
+
+  function parseDataLines(rawText) {
+    if (!rawText) return [];
+    var lines = rawText.split('\n');
+    var result = [];
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i].trim();
+      if (l.length > 0) {
+        result.push(lines[i]);
+      }
+    }
+    return result;
+  }
+
+  function parseTokens(line, fieldCount) {
+    var trimmed = (line || '').trim();
+    if (trimmed.indexOf('\t') !== -1) {
+      return trimmed.split('\t');
+    } else if (trimmed.indexOf(';') !== -1) {
+      return trimmed.split(';');
+    } else if (fieldCount > 1 && trimmed.indexOf(',') !== -1) {
+      return trimmed.split(',');
+    }
+    return [trimmed];
+  }
+
+  function getActiveMappings() {
+    var selects = varFieldsList ? varFieldsList.querySelectorAll('.field-select') : [];
+    var mappings = [];
+    for (var s = 0; s < selects.length; s++) {
+      mappings.push(parseInt(selects[s].value, 10));
+    }
+    return mappings;
+  }
+
+  function renderDatasetPreview() {
+    if (!varDatasetThead || !varDatasetTbody || !varInputList) return;
+
+    var lines = parseDataLines(varInputList.value);
+    if (lines.length === 0) {
+      alert('Vui lòng nhập hoặc tải file CSV vào ô danh sách để xem Dataset!');
+      if (varDatasetPreviewBox) varDatasetPreviewBox.style.display = 'none';
+      if (varViewDatasetBtn) varViewDatasetBtn.classList.remove('active');
+      return;
+    }
+
+    var mappings = getActiveMappings();
+    var fields = currentVariableFields || [];
+
+    var theadHtml = '<tr><th class="col-idx">#</th>';
+
+    var maxColsInMapping = 1;
+    for (var m = 0; m < mappings.length; m++) {
+      if (mappings[m] > maxColsInMapping) maxColsInMapping = mappings[m];
+    }
+
+    var numColsToRender = Math.max(maxColsInMapping, fields.length || 1);
+    for (var c = 1; c <= numColsToRender; c++) {
+      var mappedFieldNames = [];
+      for (var fIdx = 0; fIdx < fields.length; fIdx++) {
+        var cTarget = (fIdx < mappings.length) ? mappings[fIdx] : (fIdx + 1);
+        if (cTarget === c) {
+          var fRaw = (fields[fIdx].raw || ('Trường ' + (fIdx + 1))).trim();
+          if (fRaw.length > 15) fRaw = fRaw.substring(0, 15) + '…';
+          mappedFieldNames.push(fRaw);
+        }
+      }
+      var colTitle = 'Cột ' + c;
+      if (mappedFieldNames.length > 0) {
+        colTitle += ' (' + mappedFieldNames.join(', ') + ')';
+      }
+      theadHtml += '<th>' + colTitle + '</th>';
+    }
+
+    theadHtml += '<th class="col-filename">📁 Tên File JPG Dự Kiến</th></tr>';
+    varDatasetThead.innerHTML = theadHtml;
+
+    var tbodyHtml = '';
+    lines.forEach(function (line, rowIdx) {
+      var tokens = parseTokens(line, fields.length);
+      tbodyHtml += '<tr><td class="col-idx">' + (rowIdx + 1) + '</td>';
+
+      for (var colI = 1; colI <= numColsToRender; colI++) {
+        var val = (colI - 1 < tokens.length) ? tokens[colI - 1].trim() : '';
+        if (val.length === 0) {
+          tbodyHtml += '<td><span class="empty-cell">(trống)</span></td>';
+        } else {
+          tbodyHtml += '<td title="' + val.replace(/"/g, '&quot;') + '">' + val + '</td>';
+        }
+      }
+
+      var replacedValues = [];
+      for (var tj = 0; tj < fields.length; tj++) {
+        var cTarget = (tj < mappings.length) ? mappings[tj] : (tj + 1);
+        if (cTarget > 0 && (cTarget - 1) < tokens.length) {
+          var tokenVal = tokens[cTarget - 1].trim();
+          if (tokenVal.length > 0) {
+            replacedValues.push(tokenVal);
+          }
+        }
+      }
+
+      var nameCandidate = replacedValues.length > 0 ? replacedValues.join(' - ') : ('Item_' + (rowIdx + 1));
+      var safeName = nameCandidate
+        .replace(/[\r\n\\\/:\*\?"<>\|]/g, '_')
+        .replace(/\s+/g, ' ')
+        .trim();
+      if (!safeName) safeName = 'Item_' + (rowIdx + 1);
+
+      tbodyHtml += '<td class="col-filename" title="' + safeName + '.jpg">' + safeName + '.jpg</td></tr>';
+    });
+
+    varDatasetTbody.innerHTML = tbodyHtml;
+    if (varDatasetRowBadge) {
+      varDatasetRowBadge.textContent = lines.length + ' dòng dữ liệu';
+    }
+
+    if (varDatasetPreviewBox) {
+      varDatasetPreviewBox.style.display = 'block';
+    }
+    if (varViewDatasetBtn) {
+      varViewDatasetBtn.classList.add('active');
+    }
+  }
+
+  function updateDatasetPreviewIfVisible() {
+    if (varDatasetPreviewBox && varDatasetPreviewBox.style.display !== 'none') {
+      renderDatasetPreview();
+    }
+  }
+
+  if (varViewDatasetBtn) {
+    varViewDatasetBtn.addEventListener('click', function () {
+      if (varDatasetPreviewBox && varDatasetPreviewBox.style.display !== 'none') {
+        varDatasetPreviewBox.style.display = 'none';
+        varViewDatasetBtn.classList.remove('active');
+      } else {
+        renderDatasetPreview();
+      }
+    });
+  }
+
+  if (varDatasetCloseBtn && varDatasetPreviewBox) {
+    varDatasetCloseBtn.addEventListener('click', function () {
+      varDatasetPreviewBox.style.display = 'none';
+      if (varViewDatasetBtn) varViewDatasetBtn.classList.remove('active');
+    });
+  }
 
   function updateVariableLineCount() {
     if (!varInputList || !varLineCount) return;
@@ -461,6 +630,7 @@
       return l.trim().length > 0;
     });
     varLineCount.textContent = lines.length + ' dòng';
+    updateDatasetPreviewIfVisible();
   }
 
   if (varInputList) {
@@ -508,7 +678,6 @@
         { val: 0, label: '-- Giữ nguyên --' }
       ];
 
-      // Mặc định: dòng chữ 0 gán Cột 1, dòng chữ 1 gán Cột 2, dòng chữ 2 gán Cột 3...
       var defaultCol = (i < 8) ? (i + 1) : 0;
 
       colsOptions.forEach(function (opt) {
@@ -521,11 +690,17 @@
         select.appendChild(optEl);
       });
 
+      select.addEventListener('change', function () {
+        updateDatasetPreviewIfVisible();
+      });
+
       itemDiv.appendChild(numSpan);
       itemDiv.appendChild(previewSpan);
       itemDiv.appendChild(select);
       varFieldsList.appendChild(itemDiv);
     });
+
+    updateDatasetPreviewIfVisible();
   }
 
   function checkVariableSelection() {
@@ -788,12 +963,19 @@
     varCsvFileInput.addEventListener('change', handleCsvFileSelect);
   }
 
+  if (varCanvasStopBtn) {
+    varCanvasStopBtn.addEventListener('click', function () {
+      log('Đang gửi tín hiệu dừng dàn trang…', true);
+      window.TCBridge.call('setExportAbortFlag', [], function () {});
+      if (varCanvasProgressCounter) varCanvasProgressCounter.textContent = 'Đang dừng…';
+      varCanvasStopBtn.disabled = true;
+    });
+  }
+
   if (varGenerateBtn) {
     varGenerateBtn.addEventListener('click', function () {
       if (!varInputList) return;
-      var lines = varInputList.value.split('\n').filter(function (l) {
-        return l.trim().length > 0;
-      });
+      var lines = parseDataLines(varInputList.value);
 
       if (lines.length === 0) {
         log('Vui lòng nhập hoặc paste ít nhất 1 dòng văn bản vào danh sách!', true);
@@ -802,12 +984,7 @@
         return;
       }
 
-      var selects = varFieldsList ? varFieldsList.querySelectorAll('.field-select') : [];
-      var mappings = [];
-      for (var s = 0; s < selects.length; s++) {
-        mappings.push(parseInt(selects[s].value, 10));
-      }
-
+      var mappings = getActiveMappings();
       var cols = varColsEl ? parseInt(varColsEl.value, 10) : 2;
       var startPos = varStartPosEl ? varStartPosEl.value : 'right';
       var createGroup = varCreateGroupEl ? varCreateGroupEl.checked : true;
@@ -825,14 +1002,21 @@
       varGenerateBtn.disabled = true;
       var originalText = varGenerateBtn.innerHTML;
       varGenerateBtn.textContent = 'Đang tạo ' + lines.length + ' bản…';
+      if (varCanvasProgressBox) {
+        varCanvasProgressBox.style.display = 'block';
+        if (varCanvasProgressCounter) varCanvasProgressCounter.textContent = 'Đang xử lý ' + lines.length + ' bản…';
+        if (varCanvasStopBtn) varCanvasStopBtn.disabled = false;
+      }
       log('Đang nhân bản & thay đổi văn bản cho ' + lines.length + ' dòng dữ liệu (tự động cách 10mm)…');
 
       window.TCBridge.call('generateFromList', [opts], function (err, res) {
         varGenerateBtn.disabled = false;
         varGenerateBtn.innerHTML = originalText;
+        if (varCanvasProgressBox) varCanvasProgressBox.style.display = 'none';
 
         if (err) {
           log('Lỗi tạo danh sách: ' + err.message, true);
+          alert(err.message);
           return;
         }
 
@@ -852,13 +1036,52 @@
   if (varModeCanvasRadio) varModeCanvasRadio.addEventListener('change', switchVariableMode);
   if (varModeJpgRadio) varModeJpgRadio.addEventListener('change', switchVariableMode);
 
-  // Xuất hàng loạt file ảnh JPG chất lượng cao (Save for Web - Max 3000px)
+  // Xử lý nút Dừng Xuất Ảnh JPG khẩn cấp
+  if (varExportStopBtn) {
+    varExportStopBtn.addEventListener('click', function () {
+      if (!isJpgExporting) return;
+      isJpgExportCancelled = true;
+      varExportStopBtn.disabled = true;
+      varExportStopBtn.textContent = '⏳ Đang dừng xuất bản…';
+      log('Đang gửi tín hiệu dừng xuất ảnh khẩn cấp…', true);
+      window.TCBridge.call('setExportAbortFlag', [], function () {});
+    });
+  }
+
+  function cleanupJpgExportUI(wasCancelled, doneCount, totalCount, folder, errorMsg) {
+    isJpgExporting = false;
+    isJpgExportCancelled = false;
+
+    varExportJpgBtn.style.display = 'block';
+    varExportJpgBtn.disabled = false;
+    if (varExportProgressBox) varExportProgressBox.style.display = 'none';
+
+    if (wasCancelled) {
+      log('Đã dừng xuất bản theo yêu cầu! Đã xuất được: ' + doneCount + '/' + totalCount + ' file ảnh.', true);
+      alert('Đã dừng xuất bản theo yêu cầu của bạn!\nĐã xuất được: ' + doneCount + '/' + totalCount + ' file ảnh JPG.');
+    } else if (errorMsg) {
+      log('Lỗi xuất ảnh JPG: ' + errorMsg, true);
+      alert('Quá trình xuất ảnh bị dừng: ' + errorMsg);
+    } else {
+      if (varExportProgressBar) varExportProgressBar.style.width = '100%';
+      log('🎉 Đã xuất thành công toàn bộ ' + totalCount + ' file ảnh JPG toàn bộ Artboard!');
+      alert('🎉 Đã xuất thành công toàn bộ ' + totalCount + ' file ảnh JPG chất lượng cao (Save for Web Max 3000px) vào thư mục:\n' + folder);
+    }
+
+    if (doneCount > 0 && folder) {
+      window._lastJpgExportFolder = folder;
+      if (varOpenFolderRow) varOpenFolderRow.style.display = 'block';
+      launchExplorerForeground(folder, function () {
+        log('Đã mở thư mục ảnh JPG trên Windows Explorer: ' + folder);
+      });
+    }
+  }
+
+  // Xuất hàng loạt file ảnh JPG chất lượng cao (Save for Web Toàn Bộ Artboard - Max 3000px)
   if (varExportJpgBtn) {
     varExportJpgBtn.addEventListener('click', function () {
       if (!varInputList) return;
-      var lines = varInputList.value.split('\n').filter(function (l) {
-        return l.trim().length > 0;
-      });
+      var lines = parseDataLines(varInputList.value);
 
       if (lines.length === 0) {
         log('Vui lòng nhập hoặc paste ít nhất 1 dòng văn bản vào danh sách trước khi xuất ảnh!', true);
@@ -867,45 +1090,82 @@
         return;
       }
 
-      var selects = varFieldsList ? varFieldsList.querySelectorAll('.field-select') : [];
-      var mappings = [];
-      for (var s = 0; s < selects.length; s++) {
-        mappings.push(parseInt(selects[s].value, 10));
+      var mappings = getActiveMappings();
+
+      isJpgExporting = true;
+      isJpgExportCancelled = false;
+
+      // Ẩn nút xuất, hiển thị khung tiến trình & nút dừng
+      varExportJpgBtn.style.display = 'none';
+      if (varExportProgressBox) {
+        varExportProgressBox.style.display = 'block';
       }
+      if (varExportProgressBar) varExportProgressBar.style.width = '0%';
+      if (varExportProgressCounter) varExportProgressCounter.textContent = '0 / ' + lines.length + ' (0%)';
+      if (varExportCurrentName) varExportCurrentName.textContent = 'Đang khởi tạo phiên xuất ảnh…';
+      if (varExportStopBtn) {
+        varExportStopBtn.disabled = false;
+        varExportStopBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg> ⏹ DỪNG XUẤT BẢN NGAY';
+      }
+      if (varOpenFolderRow) varOpenFolderRow.style.display = 'none';
 
-      var opts = {
-        outputType: 'export_jpg',
-        items: lines,
-        mappings: mappings
-      };
+      log('Bắt đầu phiên xuất hàng loạt ' + lines.length + ' file ảnh JPG (Toàn bộ Artboard, Max 3000px)…');
 
-      varExportJpgBtn.disabled = true;
-      var origBtnHtml = varExportJpgBtn.innerHTML;
-      varExportJpgBtn.textContent = 'Đang xuất ' + lines.length + ' file JPG…';
-      log('Đang xuất ' + lines.length + ' file ảnh JPG chất lượng cao (Save for Web, Max 3000px)…');
-
-      window.TCBridge.call('generateFromList', [opts], function (err, res) {
-        varExportJpgBtn.disabled = false;
-        varExportJpgBtn.innerHTML = origBtnHtml;
-
-        if (err) {
-          log('Lỗi xuất ảnh JPG: ' + err.message, true);
-          alert(err.message);
+      window.TCBridge.call('prepareBatchJpg', [{ items: lines, mappings: mappings }], function (pErr, pRes) {
+        if (pErr) {
+          cleanupJpgExportUI(false, 0, lines.length, '', pErr.message);
           return;
         }
 
-        window._lastJpgExportFolder = res.folder || '';
-        log(res.message || ('Đã xuất thành công ' + lines.length + ' file ảnh JPG.'));
+        var exportFolder = pRes.folder;
+        window._lastJpgExportFolder = exportFolder;
+        var total = lines.length;
+        var curIdx = 0;
 
-        if (varOpenFolderRow) {
-          varOpenFolderRow.style.display = 'block';
-        }
+        function stepJpgExport() {
+          if (isJpgExportCancelled || curIdx >= total) {
+            if (isJpgExportCancelled) {
+              window.TCBridge.call('cancelBatchJpg', [], function () {
+                cleanupJpgExportUI(true, curIdx, total, exportFolder);
+              });
+            } else {
+              window.TCBridge.call('finishBatchJpg', [], function () {
+                cleanupJpgExportUI(false, total, total, exportFolder);
+              });
+            }
+            return;
+          }
 
-        if (res.folder) {
-          launchExplorerForeground(res.folder, function () {
-            log('Đã mở thư mục ảnh JPG trên Windows Explorer: ' + res.folder);
+          var pct = Math.round((curIdx / total) * 100);
+          if (varExportProgressBar) varExportProgressBar.style.width = pct + '%';
+          if (varExportProgressCounter) varExportProgressCounter.textContent = (curIdx + 1) + ' / ' + total + ' (' + pct + '%)';
+
+          var lineTokens = parseTokens(lines[curIdx], currentVariableFields ? currentVariableFields.length : 1);
+          var lineShort = (lineTokens[0] || lines[curIdx]).trim().substring(0, 30);
+          if (varExportCurrentName) varExportCurrentName.textContent = 'Đang xuất (' + (curIdx + 1) + '/' + total + '): ' + lineShort + '…';
+          log('Đang xuất ảnh ' + (curIdx + 1) + '/' + total + ': ' + lineShort);
+
+          window.TCBridge.call('exportBatchJpgItem', [curIdx, lines[curIdx], mappings], function (iErr, iRes) {
+            if (iErr) {
+              log('Lỗi xuất tại dòng ' + (curIdx + 1) + ': ' + iErr.message, true);
+              window.TCBridge.call('cancelBatchJpg', [], function () {
+                cleanupJpgExportUI(true, curIdx, total, exportFolder, iErr.message);
+              });
+              return;
+            }
+
+            if (iRes && iRes.cancelled) {
+              cleanupJpgExportUI(true, curIdx, total, exportFolder);
+              return;
+            }
+
+            curIdx++;
+            // Cho phép CEP UI render mượt mà và đón sự kiện bấm nút Stop
+            setTimeout(stepJpgExport, 20);
           });
         }
+
+        stepJpgExport();
       });
     });
   }

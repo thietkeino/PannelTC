@@ -1299,6 +1299,11 @@ $._PannelTC = $._PannelTC || {};
 
                 var exportedCount = 0;
                 for (var j = 0; j < items.length; j++) {
+                    var abortFile = new File(Folder.temp + "/tc_export_abort.flag");
+                    if (abortFile.exists) {
+                        break;
+                    }
+
                     var rawL = items[j];
                     if (typeof rawL !== 'string') continue;
                     var trimmedL = rawL.replace(/^\s+|\s+$/g, '');
@@ -1595,6 +1600,372 @@ $._PannelTC = $._PannelTC || {};
                     masterItem.remove();
                 } catch (eUgE) {}
             }
+            return P._error(err);
+        }
+    };
+
+    // -------------------------------------------------------------
+    // 5.1 Xuất Ảnh JPG Từng Dòng Theo Lô (Batch Export với Nút Dừng Tức Thì)
+    // -------------------------------------------------------------
+    P._batchState = null;
+
+    P.setExportAbortFlag = function () {
+        try {
+            var abortFile = new File(Folder.temp + "/tc_export_abort.flag");
+            abortFile.open("w");
+            abortFile.write("1");
+            abortFile.close();
+            return P._reply({ success: true, message: "Đã bật cờ dừng xuất." });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
+    P.prepareBatchJpg = function (opts) {
+        try {
+            if (app.documents.length === 0) {
+                throw new Error("Vui lòng mở một tài liệu Illustrator trước!");
+            }
+            var doc = app.activeDocument;
+            var sel = doc.selection;
+            if (!sel || sel.length === 0) {
+                throw new Error("Vui lòng quét chọn mẫu thiết kế (Logo + Chữ) trên Artboard trước khi bấm xuất ảnh!");
+            }
+
+            var docFolder = null;
+            try {
+                docFolder = doc.path;
+            } catch (ePath) {
+                throw new Error("Vui lòng bấm Ctrl + S để lưu file Illustrator trước khi xuất ảnh hàng loạt!");
+            }
+
+            opts = opts || {};
+            var items = opts.items || [];
+            if (!items || items.length === 0) {
+                throw new Error("Danh sách dữ liệu đang trống!");
+            }
+
+            var baseDocName = doc.name.replace(/\.[^\.]+$/, "");
+            var exportFolder = new Folder(docFolder.fsName + "/" + baseDocName + "_JPG_Export");
+            if (!exportFolder.exists) {
+                exportFolder.create();
+            }
+
+            // Gom các đối tượng đang chọn thành 1 Group nếu người dùng chọn nhiều đối tượng rời
+            var masterItem = null;
+            var didGroupTemplate = false;
+            if (sel.length === 1) {
+                masterItem = sel[0];
+            } else {
+                masterItem = doc.groupItems.add();
+                masterItem.name = "Master_Template";
+                for (var si = sel.length - 1; si >= 0; si--) {
+                    sel[si].moveToBeginning(masterItem);
+                }
+                didGroupTemplate = true;
+            }
+
+            // Kiểm tra các trường TextFrame trong mẫu
+            var masterTfs = _collectTextFrames(masterItem);
+            if (masterTfs.length === 0) {
+                throw new Error("Mẫu thiết kế được chọn không chứa đối tượng chữ (TextFrame) nào để thay đổi!");
+            }
+
+            // Sắp xếp textframes từ trên xuống dưới, trái qua phải
+            masterTfs.sort(function (a, b) {
+                var dy = Math.abs(b.top - a.top);
+                if (dy > 4) return b.top - a.top;
+                return a.left - b.left;
+            });
+
+            // Xác định chính xác Artboard chứa mẫu thiết kế
+            var targetArtboardIdx = doc.artboards.getActiveArtboardIndex();
+            var bBounds = masterItem.visibleBounds; // [left, top, right, bottom]
+            var midX = (bBounds[0] + bBounds[2]) / 2;
+            var midY = (bBounds[1] + bBounds[3]) / 2;
+            for (var abI = 0; abI < doc.artboards.length; abI++) {
+                var abR = doc.artboards[abI].artboardRect;
+                if (midX >= abR[0] && midX <= abR[2] && midY <= abR[1] && midY >= abR[3]) {
+                    targetArtboardIdx = abI;
+                    break;
+                }
+            }
+            var targetArtboard = doc.artboards[targetArtboardIdx];
+            var targetArtboardName = targetArtboard.name;
+            doc.artboards.setActiveArtboardIndex(targetArtboardIdx);
+
+            // Kích thước toàn bộ Artboard và tính toán tỉ lệ scale sao cho cạnh lớn nhất max 3000px
+            var targetAbRect = targetArtboard.artboardRect;
+            var abW = Math.abs(targetAbRect[2] - targetAbRect[0]);
+            var abH = Math.abs(targetAbRect[1] - targetAbRect[3]);
+            if (abW <= 0) abW = 100;
+            if (abH <= 0) abH = 100;
+
+            var maxSidePt = Math.max(abW, abH);
+            var targetScalePct = (3000.0 / maxSidePt) * 100.0;
+            if (targetScalePct > 776.0) targetScalePct = 776.0;
+            if (targetScalePct < 1.0) targetScalePct = 1.0;
+
+            // Sao lưu nội dung text gốc trên Artboard để khôi phục nguyên vẹn sau khi xuất
+            var originalContents = [];
+            for (var m = 0; m < masterTfs.length; m++) {
+                originalContents.push(masterTfs[m].contents);
+            }
+
+            // Lưu trạng thái phiên làm việc
+            P._batchState = {
+                masterItem: masterItem,
+                didGroupTemplate: didGroupTemplate,
+                masterTfs: masterTfs,
+                originalContents: originalContents,
+                targetArtboardIdx: targetArtboardIdx,
+                targetArtboardName: targetArtboardName,
+                exportFolder: exportFolder,
+                targetScalePct: targetScalePct,
+                total: items.length,
+                exportedCount: 0
+            };
+
+            // Xóa file cờ abort cũ nếu có
+            try {
+                var abortFile = new File(Folder.temp + "/tc_export_abort.flag");
+                if (abortFile.exists) abortFile.remove();
+            } catch (eAf) {}
+
+            return P._reply({
+                success: true,
+                total: items.length,
+                folder: exportFolder.fsName,
+                targetArtboard: targetArtboardName,
+                message: "Đã sẵn sàng xuất " + items.length + " file ảnh JPG toàn bộ Artboard."
+            });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
+    P.exportBatchJpgItem = function (itemIndex, lineText, mappings) {
+        try {
+            if (!P._batchState) {
+                throw new Error("Phiên xuất ảnh chưa được khởi tạo!");
+            }
+            var s = P._batchState;
+            var doc = app.activeDocument;
+
+            // Kiểm tra cờ dừng
+            var abortFile = new File(Folder.temp + "/tc_export_abort.flag");
+            if (abortFile.exists) {
+                return P._reply({
+                    success: true,
+                    cancelled: true,
+                    itemIndex: itemIndex,
+                    message: "Đã phát hiện lệnh dừng."
+                });
+            }
+
+            mappings = mappings || [];
+            var rawL = lineText || "";
+            var trimmedL = rawL.replace(/^\s+|\s+$/g, '');
+
+            var lineTokens = [];
+            if (trimmedL.indexOf('\t') !== -1) {
+                lineTokens = trimmedL.split('\t');
+            } else if (trimmedL.indexOf(';') !== -1) {
+                lineTokens = trimmedL.split(';');
+            } else if (s.masterTfs.length > 1 && trimmedL.indexOf(',') !== -1) {
+                lineTokens = trimmedL.split(',');
+            } else {
+                lineTokens = [trimmedL];
+            }
+
+            // Thay đổi nội dung chữ trực tiếp trên Artboard
+            var replacedValues = [];
+            for (var tj = 0; tj < s.masterTfs.length; tj++) {
+                var cTarget = (tj < mappings.length) ? parseInt(mappings[tj], 10) : (tj + 1);
+                if (cTarget > 0) {
+                    var tIdxTok = cTarget - 1;
+                    if (tIdxTok < lineTokens.length) {
+                        var valText = lineTokens[tIdxTok].replace(/^\s+|\s+$/g, '');
+                        if (valText.length > 0) {
+                            replacedValues.push(valText);
+                        }
+                        try {
+                            s.masterTfs[tj].contents = valText;
+                        } catch (eSetT) {}
+                    } else {
+                        try {
+                            s.masterTfs[tj].contents = "";
+                        } catch (eSetB) {}
+                    }
+                }
+            }
+
+            // Đặt tên file theo đúng nội dung chữ đã thay thế
+            var nameCandidate = replacedValues.length > 0 ? replacedValues.join(' - ') : ("Item_" + (itemIndex + 1));
+            var safeName = nameCandidate
+                .replace(/[\r\n\\\/:\*\?"<>\|]/g, "_")
+                .replace(/\s+/g, " ")
+                .replace(/^\s+|\s+$/g, "")
+                .substring(0, 80);
+            if (!safeName || safeName.length === 0) {
+                safeName = "Item_" + (itemIndex + 1);
+            }
+
+            // Chống ghi đè nếu danh sách có nhiều dòng trùng tên
+            var destJpgFile = new File(s.exportFolder.fsName + "/" + safeName + ".jpg");
+            var collisionCounter = 1;
+            while (destJpgFile.exists) {
+                destJpgFile = new File(s.exportFolder.fsName + "/" + safeName + "_" + collisionCounter + ".jpg");
+                collisionCounter++;
+            }
+
+            // Cập nhật canvas và kích hoạt đúng Artboard cần xuất
+            app.redraw();
+            doc.artboards.setActiveArtboardIndex(s.targetArtboardIdx);
+
+            // Cấu hình xuất ảnh JPG sắc nét chất lượng cao (Save for Web)
+            var jpgExportOpts = new ExportOptionsJPEG();
+            jpgExportOpts.antiAliasing = true;
+            jpgExportOpts.artBoardClipping = true;
+            jpgExportOpts.qualitySetting = 100;
+            jpgExportOpts.optimization = true;
+            jpgExportOpts.matte = true;
+            var whiteCol = new RGBColor();
+            whiteCol.red = 255;
+            whiteCol.green = 255;
+            whiteCol.blue = 255;
+            jpgExportOpts.matteColor = whiteCol;
+            jpgExportOpts.horizontalScale = s.targetScalePct;
+            jpgExportOpts.verticalScale = s.targetScalePct;
+
+            // Xuất TOÀN BỘ ARTBOARD thành file ảnh JPG
+            doc.exportFile(destJpgFile, ExportType.JPEG, jpgExportOpts);
+
+            // Xử lý nếu Illustrator tự gắn hậu tố tên artboard
+            if (!destJpgFile.exists) {
+                var targetAbFile = new File(s.exportFolder.fsName + "/" + safeName + "_" + s.targetArtboardName + ".jpg");
+                if (targetAbFile.exists) {
+                    targetAbFile.rename(destJpgFile.name);
+                } else {
+                    var createdAbFiles = s.exportFolder.getFiles(function (f) {
+                        return (f instanceof File) && (f.name.indexOf(safeName) === 0) && (/\.jpg$/i.test(f.name));
+                    });
+                    if (createdAbFiles && createdAbFiles.length > 0) {
+                        try { createdAbFiles[0].rename(destJpgFile.name); } catch (eRen) {}
+                    }
+                }
+                var leftoverFiles = s.exportFolder.getFiles(function (f) {
+                    return (f instanceof File) && (f.name.indexOf(safeName + "_") === 0) && (/\.jpg$/i.test(f.name));
+                });
+                for (var lf = 0; lf < leftoverFiles.length; lf++) {
+                    try { leftoverFiles[lf].remove(); } catch (eRm) {}
+                }
+            }
+
+            s.exportedCount++;
+
+            return P._reply({
+                success: true,
+                itemIndex: itemIndex,
+                fileName: destJpgFile.name,
+                exportedCount: s.exportedCount,
+                folder: s.exportFolder.fsName
+            });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
+    P.finishBatchJpg = function () {
+        try {
+            if (!P._batchState) {
+                return P._reply({ success: true, message: "Không có phiên xuất nào đang chạy." });
+            }
+            var s = P._batchState;
+            var doc = app.activeDocument;
+
+            // Khôi phục lại nội dung chữ gốc trên Artboard
+            if (s.masterTfs && s.originalContents) {
+                for (var rk = 0; rk < s.masterTfs.length; rk++) {
+                    try {
+                        s.masterTfs[rk].contents = s.originalContents[rk];
+                    } catch (eRest) {}
+                }
+            }
+            app.redraw();
+
+            // Dọn dẹp group tạm nếu lúc đầu người dùng quét chọn nhiều đối tượng rời
+            if (s.didGroupTemplate && s.masterItem) {
+                try {
+                    for (var ch = s.masterItem.pageItems.length - 1; ch >= 0; ch--) {
+                        s.masterItem.pageItems[ch].moveToBeginning(doc.activeLayer);
+                    }
+                    s.masterItem.remove();
+                } catch (eUngroup) {}
+            }
+
+            var count = s.exportedCount;
+            var folder = s.exportFolder.fsName;
+            P._batchState = null;
+
+            return P._reply({
+                success: true,
+                count: count,
+                folder: folder,
+                message: "Đã xuất thành công " + count + " file ảnh JPG toàn bộ Artboard vào: " + folder
+            });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
+    P.cancelBatchJpg = function () {
+        try {
+            try {
+                var abortFile = new File(Folder.temp + "/tc_export_abort.flag");
+                abortFile.open("w");
+                abortFile.write("1");
+                abortFile.close();
+            } catch (eAf) {}
+
+            if (!P._batchState) {
+                return P._reply({ success: true, cancelled: true, message: "Đã gửi lệnh dừng." });
+            }
+            var s = P._batchState;
+            var doc = app.activeDocument;
+
+            // Khôi phục lại nội dung chữ gốc trên Artboard
+            if (s.masterTfs && s.originalContents) {
+                for (var rk = 0; rk < s.masterTfs.length; rk++) {
+                    try {
+                        s.masterTfs[rk].contents = s.originalContents[rk];
+                    } catch (eRest) {}
+                }
+            }
+            app.redraw();
+
+            // Dọn dẹp group tạm nếu lúc đầu người dùng quét chọn nhiều đối tượng rời
+            if (s.didGroupTemplate && s.masterItem) {
+                try {
+                    for (var ch = s.masterItem.pageItems.length - 1; ch >= 0; ch--) {
+                        s.masterItem.pageItems[ch].moveToBeginning(doc.activeLayer);
+                    }
+                    s.masterItem.remove();
+                } catch (eUngroup) {}
+            }
+
+            var count = s.exportedCount;
+            var folder = s.exportFolder.fsName;
+            P._batchState = null;
+
+            return P._reply({
+                success: true,
+                cancelled: true,
+                count: count,
+                folder: folder,
+                message: "Đã dừng xuất bản theo yêu cầu! Đã xuất được " + count + " file ảnh JPG."
+            });
+        } catch (err) {
             return P._error(err);
         }
     };

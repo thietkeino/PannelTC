@@ -78,10 +78,13 @@ PannelTC/
      - **Tải file CSV mẫu**: Bấm nút `📥 Tải file CSV mẫu` để tải file CSV có sẵn tiêu đề các cột tương ứng với mẫu thiết kế (hỗ trợ tiếng Việt UTF-8 BOM chuẩn cho Excel).
      - **Tải lên file CSV**: Điền danh sách vào file CSV rồi bấm `📤 Tải lên file CSV` (hệ thống tự động đọc và nạp vào danh sách).
      - **Hoặc dán trực tiếp**: Copy trực tiếp các cột từ Excel rồi paste vào ô danh sách.
+     - **👁 Xem trước Dataset (View Dataset)**: Bấm nút `👁 Xem Dataset` để mở bảng xem trước chi tiết toàn bộ dữ liệu, kiểm tra khớp cột và tên file JPG dự kiến xuất trước khi bấm xuất bản.
   5. **Chọn 1 trong 2 tùy chọn đầu ra (Output)**:
-     - **Dàn trực tiếp trên Artboard (Lưới Vector)**: Chọn số cột (ví dụ 2 cột, 3 cột...), hệ thống tự động tính toán giãn cách 10mm giữa các cột và hàng dựa trên kích thước thật của chữ mới, gom group và giữ master.
+     - **Dàn trực tiếp trên Artboard (Lưới Vector)**: Chọn số cột (ví dụ 2 cột, 3 cột...), hệ thống tự động tính toán giãn cách 10mm giữa các cột và hàng dựa trên kích thước thật của chữ mới, gom group và giữ master. Có nút dừng tiến trình nếu cần.
      - **Xuất file Ảnh JPG chất lượng cao (Save for Web Toàn Bộ Artboard)**: Xuất toàn bộ Artboard chứa mẫu thiết kế theo từng dòng danh sách thành từng file ảnh JPG sắc nét chất lượng cao 100% (chuẩn Save for Web tối ưu hóa), tự động tính toán tỉ lệ với cạnh lớn nhất của Artboard tối đa 3000px. Tên từng file ảnh được đặt tự động theo đúng nội dung chữ đã thay thế (tự động chuẩn hóa ký tự và chống trùng tên). Mẫu gốc trên Artboard được giữ nguyên vẹn sau khi xuất. File được lưu vào thư mục riêng `[TenFile]_JPG_Export` kèm nút mở thư mục nhanh ngay trên panel.
-  6. Bấm nút thực hiện: **"Tạo Danh Sách Trên Artboard"** hoặc **"Xuất Hàng Loạt File Ảnh JPG (Max 3000px)"**.
+  6. **Theo dõi tiến trình & Nút Dừng Xuất Bản (Stop / Cancel)**:
+     - Bảng điều khiển hiển thị thanh tiến trình phần trăm (%) và tên file đang xuất theo thời gian thực.
+     - Nếu phát hiện sai sót, người dùng có thể bấm nút **`⏹ DỪNG XUẤT BẢN NGAY`**: Hệ thống sẽ dừng lại ngay lập tức, tự động khôi phục nguyên vẹn nội dung chữ gốc trên Artboard và giữ lại các file ảnh đã xuất thành công trước đó.
 
 ### 📂 6. Mở Nhanh Thư Mục Dự Án (Windows Explorer)
 - Mở trực tiếp thư mục bằng Windows Explorer với 1 click chuột (không tốn RAM, 0% CPU, chạy qua tiến trình native của Windows):
