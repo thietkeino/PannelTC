@@ -1192,6 +1192,11 @@ $._PannelTC = $._PannelTC || {};
                 throw new Error("Danh sách dữ liệu đang trống. Vui lòng nhập hoặc paste ít nhất 1 dòng văn bản!");
             }
 
+            // Nếu đang mở chế độ xem trước dataset trên canvas, khôi phục lại mẫu gốc trước khi tạo
+            if (P._livePreviewState) {
+                try { P.restoreOriginalTemplate(); } catch (eLiveRest1) {}
+            }
+
             // Gom các đối tượng đang chọn thành 1 Group nếu người dùng chọn nhiều đối tượng rời
             var masterItem = null;
             var didGroupTemplate = false;
@@ -1645,6 +1650,11 @@ $._PannelTC = $._PannelTC || {};
                 throw new Error("Danh sách dữ liệu đang trống!");
             }
 
+            // Nếu đang mở chế độ xem trước dataset trên canvas, khôi phục lại mẫu gốc trước khi xuất ảnh
+            if (P._livePreviewState) {
+                try { P.restoreOriginalTemplate(); } catch (eLiveRest2) {}
+            }
+
             var baseDocName = doc.name.replace(/\.[^\.]+$/, "");
             var exportFolder = new Folder(docFolder.fsName + "/" + baseDocName + "_JPG_Export");
             if (!exportFolder.exists) {
@@ -1964,6 +1974,187 @@ $._PannelTC = $._PannelTC || {};
                 count: count,
                 folder: folder,
                 message: "Đã dừng xuất bản theo yêu cầu! Đã xuất được " + count + " file ảnh JPG."
+            });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
+    // -------------------------------------------------------------
+    // 5c. Chế độ Xem trước Dataset trực tiếp trên Artboard (Live Preview kiểu Variable)
+    // -------------------------------------------------------------
+    P._livePreviewState = null;
+
+    P.previewDatasetRecord = function (recordIndex, lineText, mappings) {
+        try {
+            if (app.documents.length === 0) {
+                throw new Error("Không có tài liệu nào đang mở trong Illustrator!");
+            }
+            var doc = app.activeDocument;
+
+            // Nếu chưa có trạng thái live preview hoặc đối tượng đã bị hủy, khởi tạo mới
+            var st = P._livePreviewState;
+            var isStateValid = false;
+            if (st && st.masterTfs && st.masterTfs.length > 0) {
+                try {
+                    var testStr = st.masterTfs[0].contents;
+                    isStateValid = true;
+                } catch (eValid) {
+                    isStateValid = false;
+                    P._livePreviewState = null;
+                }
+            }
+
+            if (!isStateValid) {
+                var sel = doc.selection;
+                if (!sel || sel.length === 0) {
+                    throw new Error("Vui lòng quét chọn mẫu thiết kế (chứa TextFrame) trên Artboard trước khi xem trước!");
+                }
+
+                var masterItem = null;
+                var didGroupTemplate = false;
+                if (sel.length === 1) {
+                    masterItem = sel[0];
+                } else {
+                    var tempGrp = doc.groupItems.add();
+                    for (var g = sel.length - 1; g >= 0; g--) {
+                        sel[g].moveToBeginning(tempGrp);
+                    }
+                    masterItem = tempGrp;
+                    didGroupTemplate = true;
+                }
+
+                var masterTfs = _collectTextFrames(masterItem);
+                if (masterTfs.length === 0) {
+                    if (didGroupTemplate && masterItem) {
+                        try {
+                            for (var ch = masterItem.pageItems.length - 1; ch >= 0; ch--) {
+                                masterItem.pageItems[ch].moveToBeginning(doc.activeLayer);
+                            }
+                            masterItem.remove();
+                        } catch (eUg) {}
+                    }
+                    throw new Error("Đối tượng được chọn không chứa đối tượng chữ (TextFrame) nào để thay đổi!");
+                }
+
+                masterTfs.sort(function (a, b) {
+                    var dy = Math.abs(b.top - a.top);
+                    if (dy > 4) return b.top - a.top;
+                    return a.left - b.left;
+                });
+
+                var origContents = [];
+                for (var m = 0; m < masterTfs.length; m++) {
+                    origContents.push(masterTfs[m].contents);
+                }
+
+                var targetArtboardIdx = doc.artboards.getActiveArtboardIndex();
+                var bBounds = masterItem.visibleBounds;
+                var midX = (bBounds[0] + bBounds[2]) / 2;
+                var midY = (bBounds[1] + bBounds[3]) / 2;
+                for (var abI = 0; abI < doc.artboards.length; abI++) {
+                    var abR = doc.artboards[abI].artboardRect;
+                    if (midX >= abR[0] && midX <= abR[2] && midY <= abR[1] && midY >= abR[3]) {
+                        targetArtboardIdx = abI;
+                        break;
+                    }
+                }
+
+                st = {
+                    masterItem: masterItem,
+                    didGroupTemplate: didGroupTemplate,
+                    masterTfs: masterTfs,
+                    originalContents: origContents,
+                    targetArtboardIdx: targetArtboardIdx
+                };
+                P._livePreviewState = st;
+            }
+
+            mappings = mappings || [];
+            var rawL = lineText || "";
+            var trimmedL = rawL.replace(/^\s+|\s+$/g, '');
+
+            var lineTokens = [];
+            if (trimmedL.indexOf('\t') !== -1) {
+                lineTokens = trimmedL.split('\t');
+            } else if (trimmedL.indexOf(';') !== -1) {
+                lineTokens = trimmedL.split(';');
+            } else if (st.masterTfs.length > 1 && trimmedL.indexOf(',') !== -1) {
+                lineTokens = trimmedL.split(',');
+            } else {
+                lineTokens = [trimmedL];
+            }
+
+            var replacedValues = [];
+            for (var tj = 0; tj < st.masterTfs.length; tj++) {
+                var cTarget = (tj < mappings.length) ? parseInt(mappings[tj], 10) : (tj + 1);
+                if (cTarget > 0) {
+                    var tIdxTok = cTarget - 1;
+                    if (tIdxTok < lineTokens.length) {
+                        var valText = lineTokens[tIdxTok].replace(/^\s+|\s+$/g, '');
+                        if (valText.length > 0) {
+                            replacedValues.push(valText);
+                        }
+                        try {
+                            st.masterTfs[tj].contents = valText;
+                        } catch (eSet) {}
+                    } else {
+                        try {
+                            st.masterTfs[tj].contents = "";
+                        } catch (eEmpty) {}
+                    }
+                }
+            }
+
+            if (typeof st.targetArtboardIdx === 'number') {
+                try {
+                    doc.artboards.setActiveArtboardIndex(st.targetArtboardIdx);
+                } catch (eAb) {}
+            }
+            app.redraw();
+
+            return P._reply({
+                success: true,
+                recordIndex: recordIndex,
+                replacedValues: replacedValues,
+                previewSummary: replacedValues.length > 0 ? replacedValues.join(' - ') : ("Dòng " + (recordIndex + 1))
+            });
+        } catch (err) {
+            return P._error(err);
+        }
+    };
+
+    P.restoreOriginalTemplate = function () {
+        try {
+            if (!P._livePreviewState) {
+                return P._reply({ success: true, message: "Không có bản xem trước nào cần khôi phục." });
+            }
+            var st = P._livePreviewState;
+            var doc = app.documents.length > 0 ? app.activeDocument : null;
+
+            if (st.masterTfs && st.originalContents) {
+                for (var rk = 0; rk < st.masterTfs.length; rk++) {
+                    try {
+                        st.masterTfs[rk].contents = st.originalContents[rk];
+                    } catch (eRest) {}
+                }
+            }
+
+            if (st.didGroupTemplate && st.masterItem && doc) {
+                try {
+                    for (var ch = st.masterItem.pageItems.length - 1; ch >= 0; ch--) {
+                        st.masterItem.pageItems[ch].moveToBeginning(doc.activeLayer);
+                    }
+                    st.masterItem.remove();
+                } catch (eUg) {}
+            }
+
+            app.redraw();
+            P._livePreviewState = null;
+
+            return P._reply({
+                success: true,
+                message: "Đã khôi phục nội dung mẫu gốc thành công."
             });
         } catch (err) {
             return P._error(err);

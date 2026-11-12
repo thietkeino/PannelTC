@@ -462,6 +462,20 @@
   var varDatasetTbody = document.getElementById('var-dataset-tbody');
   var varDatasetRowBadge = document.getElementById('var-dataset-row-badge');
 
+  // Elements: Dataset Dual Modes & Live Navigator (kiểu Variable Illustrator)
+  var varDatasetTabTable = document.getElementById('var-dataset-tab-table');
+  var varDatasetTabLive = document.getElementById('var-dataset-tab-live');
+  var varDatasetViewTable = document.getElementById('var-dataset-view-table');
+  var varDatasetViewLive = document.getElementById('var-dataset-view-live');
+  var varLiveFirst = document.getElementById('var-live-first');
+  var varLivePrev = document.getElementById('var-live-prev');
+  var varLiveNext = document.getElementById('var-live-next');
+  var varLiveLast = document.getElementById('var-live-last');
+  var varLiveSelect = document.getElementById('var-live-select');
+  var varLiveCounter = document.getElementById('var-live-counter');
+  var varLiveRestoreBtn = document.getElementById('var-live-restore-btn');
+  var varLiveDetails = document.getElementById('var-live-details');
+
   var varExportProgressBox = document.getElementById('var-export-progress-box');
   var varExportProgressCounter = document.getElementById('var-export-progress-counter');
   var varExportProgressBar = document.getElementById('var-export-progress-bar');
@@ -473,6 +487,10 @@
   var varCanvasStopBtn = document.getElementById('var-canvas-stop-btn');
 
   var currentVariableFields = [];
+  var currentDatasetLines = [];
+  var currentDatasetPreviewIndex = 0;
+  var isLivePreviewActive = false;
+  var currentDatasetMode = 'table';
   var isJpgExporting = false;
   var isJpgExportCancelled = false;
 
@@ -510,6 +528,141 @@
     return mappings;
   }
 
+  function highlightTableRow(index) {
+    if (!varDatasetTbody) return;
+    var rows = varDatasetTbody.children;
+    for (var r = 0; r < rows.length; r++) {
+      if (r === index) {
+        rows[r].classList.add('previewing-row');
+      } else {
+        rows[r].classList.remove('previewing-row');
+      }
+    }
+  }
+
+  function renderLiveRecordDetails(index) {
+    if (!varLiveDetails || index < 0 || index >= currentDatasetLines.length) return;
+    var line = currentDatasetLines[index];
+    var fields = currentVariableFields || [];
+    var mappings = getActiveMappings();
+    var tokens = parseTokens(line, fields.length);
+
+    var html = '';
+    var replacedValues = [];
+    var count = Math.max(fields.length, tokens.length);
+    for (var f = 0; f < count; f++) {
+      var fRaw = (f < fields.length && fields[f].raw) ? fields[f].raw : ('Trường ' + (f + 1));
+      var cTarget = (f < mappings.length) ? mappings[f] : (f + 1);
+      var val = (cTarget > 0 && (cTarget - 1) < tokens.length) ? tokens[cTarget - 1].trim() : '';
+      if (val.length > 0) {
+        replacedValues.push(val);
+      }
+      html += '<div class="live-detail-field">' +
+        '<span class="live-detail-label">' + fRaw + ':</span> ' +
+        '<span class="live-detail-val">' + (val || '<em style="color:#f87171;">(trống)</em>') + '</span>' +
+        '</div>';
+    }
+
+    var nameCandidate = replacedValues.length > 0 ? replacedValues.join(' - ') : ('Item_' + (index + 1));
+    var safeName = nameCandidate
+      .replace(/[\r\n\\\/:\*\?"<>\|]/g, '_')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!safeName) safeName = 'Item_' + (index + 1);
+
+    html += '<div class="live-detail-file">📁 File JPG dự kiến: ' + safeName + '.jpg</div>';
+    varLiveDetails.innerHTML = html;
+  }
+
+  function previewDatasetRecordOnCanvas(index) {
+    if (currentDatasetLines.length === 0) return;
+    if (index < 0) index = 0;
+    if (index >= currentDatasetLines.length) index = currentDatasetLines.length - 1;
+    currentDatasetPreviewIndex = index;
+
+    if (varLiveFirst) varLiveFirst.disabled = (index === 0);
+    if (varLivePrev) varLivePrev.disabled = (index === 0);
+    if (varLiveNext) varLiveNext.disabled = (index === currentDatasetLines.length - 1);
+    if (varLiveLast) varLiveLast.disabled = (index === currentDatasetLines.length - 1);
+
+    if (varLiveCounter) {
+      varLiveCounter.textContent = 'Dòng ' + (index + 1) + ' / ' + currentDatasetLines.length;
+    }
+
+    if (varLiveSelect && String(varLiveSelect.value) !== String(index)) {
+      varLiveSelect.value = String(index);
+    }
+
+    renderLiveRecordDetails(index);
+    highlightTableRow(index);
+
+    var lineText = currentDatasetLines[index];
+    var mappings = getActiveMappings();
+    window.TCBridge.call('previewDatasetRecord', [index, lineText, mappings], function (err, res) {
+      if (err) {
+        console.warn('Lỗi xem trước dataset trên canvas:', err);
+      } else {
+        isLivePreviewActive = true;
+      }
+    });
+  }
+
+  function restoreOriginalTemplateOnCanvas(silent) {
+    if (!isLivePreviewActive) return;
+    window.TCBridge.call('restoreOriginalTemplate', [], function (err, res) {
+      if (err) {
+        if (!silent) alert('Lỗi khôi phục mẫu: ' + err.message);
+      } else {
+        isLivePreviewActive = false;
+        highlightTableRow(-1);
+        if (!silent) {
+          alert('Đã khôi phục lại nội dung chữ ban đầu trên Artboard!');
+        }
+      }
+    });
+  }
+
+  function switchDatasetMode(mode) {
+    currentDatasetMode = mode;
+    if (mode === 'live') {
+      if (varDatasetTabLive) varDatasetTabLive.classList.add('active');
+      if (varDatasetTabTable) varDatasetTabTable.classList.remove('active');
+      if (varDatasetViewLive) varDatasetViewLive.style.display = 'block';
+      if (varDatasetViewTable) varDatasetViewTable.style.display = 'none';
+      if (currentDatasetLines.length > 0) {
+        previewDatasetRecordOnCanvas(currentDatasetPreviewIndex);
+      }
+    } else {
+      if (varDatasetTabTable) varDatasetTabTable.classList.add('active');
+      if (varDatasetTabLive) varDatasetTabLive.classList.remove('active');
+      if (varDatasetViewTable) varDatasetViewTable.style.display = 'block';
+      if (varDatasetViewLive) varDatasetViewLive.style.display = 'none';
+      highlightTableRow(currentDatasetPreviewIndex);
+    }
+  }
+
+  function populateLiveSelectOptions(lines) {
+    if (!varLiveSelect) return;
+    var fields = currentVariableFields || [];
+    var mappings = getActiveMappings();
+    var html = '';
+    lines.forEach(function (line, idx) {
+      var tokens = parseTokens(line, fields.length);
+      var rep = [];
+      for (var f = 0; f < fields.length; f++) {
+        var cTarget = (f < mappings.length) ? mappings[f] : (f + 1);
+        if (cTarget > 0 && (cTarget - 1) < tokens.length) {
+          var v = tokens[cTarget - 1].trim();
+          if (v) rep.push(v);
+        }
+      }
+      var summary = rep.length > 0 ? rep.join(' - ') : ('Dòng ' + (idx + 1));
+      if (summary.length > 35) summary = summary.substring(0, 35) + '…';
+      html += '<option value="' + idx + '">' + (idx + 1) + '. ' + summary + '</option>';
+    });
+    varLiveSelect.innerHTML = html;
+  }
+
   function renderDatasetPreview() {
     if (!varDatasetThead || !varDatasetTbody || !varInputList) return;
 
@@ -518,7 +671,13 @@
       alert('Vui lòng nhập hoặc tải file CSV vào ô danh sách để xem Dataset!');
       if (varDatasetPreviewBox) varDatasetPreviewBox.style.display = 'none';
       if (varViewDatasetBtn) varViewDatasetBtn.classList.remove('active');
+      restoreOriginalTemplateOnCanvas(true);
       return;
+    }
+
+    currentDatasetLines = lines;
+    if (currentDatasetPreviewIndex >= lines.length) {
+      currentDatasetPreviewIndex = 0;
     }
 
     var mappings = getActiveMappings();
@@ -555,7 +714,7 @@
     var tbodyHtml = '';
     lines.forEach(function (line, rowIdx) {
       var tokens = parseTokens(line, fields.length);
-      tbodyHtml += '<tr><td class="col-idx">' + (rowIdx + 1) + '</td>';
+      tbodyHtml += '<tr data-row-idx="' + rowIdx + '"><td class="col-idx">' + (rowIdx + 1) + '</td>';
 
       for (var colI = 1; colI <= numColsToRender; colI++) {
         var val = (colI - 1 < tokens.length) ? tokens[colI - 1].trim() : '';
@@ -588,15 +747,35 @@
     });
 
     varDatasetTbody.innerHTML = tbodyHtml;
+
+    // Gắn sự kiện click vào từng dòng trong table để xem nhanh trên canvas
+    var rows = varDatasetTbody.querySelectorAll('tr');
+    rows.forEach(function (tr) {
+      tr.addEventListener('click', function () {
+        var rIdx = parseInt(tr.getAttribute('data-row-idx'), 10);
+        if (!isNaN(rIdx)) {
+          previewDatasetRecordOnCanvas(rIdx);
+        }
+      });
+    });
+
     if (varDatasetRowBadge) {
       varDatasetRowBadge.textContent = lines.length + ' dòng dữ liệu';
     }
+
+    populateLiveSelectOptions(lines);
 
     if (varDatasetPreviewBox) {
       varDatasetPreviewBox.style.display = 'block';
     }
     if (varViewDatasetBtn) {
       varViewDatasetBtn.classList.add('active');
+    }
+
+    if (currentDatasetMode === 'live') {
+      previewDatasetRecordOnCanvas(currentDatasetPreviewIndex);
+    } else {
+      highlightTableRow(currentDatasetPreviewIndex);
     }
   }
 
@@ -611,6 +790,7 @@
       if (varDatasetPreviewBox && varDatasetPreviewBox.style.display !== 'none') {
         varDatasetPreviewBox.style.display = 'none';
         varViewDatasetBtn.classList.remove('active');
+        restoreOriginalTemplateOnCanvas(true);
       } else {
         renderDatasetPreview();
       }
@@ -621,6 +801,58 @@
     varDatasetCloseBtn.addEventListener('click', function () {
       varDatasetPreviewBox.style.display = 'none';
       if (varViewDatasetBtn) varViewDatasetBtn.classList.remove('active');
+      restoreOriginalTemplateOnCanvas(true);
+    });
+  }
+
+  if (varDatasetTabTable) {
+    varDatasetTabTable.addEventListener('click', function () {
+      switchDatasetMode('table');
+    });
+  }
+
+  if (varDatasetTabLive) {
+    varDatasetTabLive.addEventListener('click', function () {
+      switchDatasetMode('live');
+    });
+  }
+
+  if (varLiveFirst) {
+    varLiveFirst.addEventListener('click', function () {
+      previewDatasetRecordOnCanvas(0);
+    });
+  }
+
+  if (varLivePrev) {
+    varLivePrev.addEventListener('click', function () {
+      previewDatasetRecordOnCanvas(currentDatasetPreviewIndex - 1);
+    });
+  }
+
+  if (varLiveNext) {
+    varLiveNext.addEventListener('click', function () {
+      previewDatasetRecordOnCanvas(currentDatasetPreviewIndex + 1);
+    });
+  }
+
+  if (varLiveLast) {
+    varLiveLast.addEventListener('click', function () {
+      previewDatasetRecordOnCanvas(currentDatasetLines.length - 1);
+    });
+  }
+
+  if (varLiveSelect) {
+    varLiveSelect.addEventListener('change', function () {
+      var idx = parseInt(varLiveSelect.value, 10);
+      if (!isNaN(idx)) {
+        previewDatasetRecordOnCanvas(idx);
+      }
+    });
+  }
+
+  if (varLiveRestoreBtn) {
+    varLiveRestoreBtn.addEventListener('click', function () {
+      restoreOriginalTemplateOnCanvas(false);
     });
   }
 
@@ -984,6 +1216,8 @@
         return;
       }
 
+      restoreOriginalTemplateOnCanvas(true);
+
       var mappings = getActiveMappings();
       var cols = varColsEl ? parseInt(varColsEl.value, 10) : 2;
       var startPos = varStartPosEl ? varStartPosEl.value : 'right';
@@ -1089,6 +1323,8 @@
         varInputList.focus();
         return;
       }
+
+      restoreOriginalTemplateOnCanvas(true);
 
       var mappings = getActiveMappings();
 

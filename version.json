@@ -1,7 +1,7 @@
 {
-  "version": "1.6.0",
+  "version": "1.6.1",
   "githubRepo": "thietkeino/PannelTC",
   "branch": "main",
   "releaseDate": "2026-11-12",
-  "changelog": "Bản v1.6.0: Bổ sung chức năng Xem trước Dataset (View Dataset) hiển thị bảng chi tiết các cột và tên file JPG dự kiến; bổ sung thanh tiến trình và nút Dừng xuất bản (Stop/Cancel) dừng tức thì bất cứ lúc nào và khôi phục Artboard gốc."
+  "changelog": "Bản v1.6.1: Nâng cấp tính năng Xem Dataset với 2 chế độ linh hoạt: (1) Dạng Danh Sách (bảng chi tiết kèm click xem nhanh dòng bất kỳ) và (2) Chuyển Dòng Trên Canvas (Live Navigator trực tiếp trên Artboard giống bảng Variable của Illustrator với các nút ⏮ ◀ Trước / Sau ▶ ⏭, dropdown chọn dòng và nút Khôi Phục Mẫu Gốc)."
 }

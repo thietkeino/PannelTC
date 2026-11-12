@@ -17,7 +17,7 @@
           <span class="tagline">Adobe Illustrator 2024</span>
         </div>
       </div>
-      <div class="version-pill" id="panel-version-pill">v1.6.0</div>
+      <div class="version-pill" id="panel-version-pill">v1.6.1</div>
     </header>
 
     <!-- Banner thông báo cập nhật (Tự động hiện khi có bản mới trên GitHub) -->
@@ -388,22 +388,61 @@
             <textarea id="var-input-list" class="textarea-list" rows="5" placeholder="Copy các cột từ Excel hoặc bấm 'Tải lên file CSV' ở trên...&#10;Ví dụ:&#10;Nguyễn Văn An&#9;Trưởng Phòng&#9;Chúc mừng sinh nhật&#10;Trần Thị Bình&#9;Nhân Viên&#9;Chúc bạn thành công"></textarea>
             <p class="field-sub-desc">💡 Tải file CSV mẫu về máy để điền trong Excel, hoặc dán trực tiếp dữ liệu từ Excel vào ô trên.</p>
 
-            <!-- Khung Xem Trước Dataset (Bảng dữ liệu tương ứng các cột và tên file xuất) -->
+            <!-- Khung Xem Trước Dataset (Bảng dữ liệu và Live Record Switcher trên Canvas kiểu Variable) -->
             <div id="var-dataset-preview-box" class="dataset-preview-box" style="display: none;">
               <div class="dataset-preview-header">
                 <div class="dataset-preview-title">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                  <span>Bảng Dữ Liệu Dataset</span>
+                  <span>Xem Dataset</span>
                   <span id="var-dataset-row-badge" class="dataset-badge">0 dòng</span>
                 </div>
-                <button id="var-dataset-close-btn" class="dataset-close-btn" type="button" title="Đóng bảng xem trước">✕ Đóng</button>
+                <button id="var-dataset-close-btn" class="dataset-close-btn" type="button" title="Đóng bảng xem trước và khôi phục chữ mẫu gốc">✕ Đóng</button>
               </div>
-              <div class="dataset-hint">💡 Kéo ngang để kiểm tra từng cột chữ và tên file ảnh JPG dự kiến xuất trước khi bấm xuất bản.</div>
-              <div class="dataset-table-container">
-                <table class="dataset-table" id="var-dataset-table">
-                  <thead id="var-dataset-thead"></thead>
-                  <tbody id="var-dataset-tbody"></tbody>
-                </table>
+
+              <!-- Segmented View Toggle: Danh sách / Live Preview -->
+              <div class="dataset-view-toggle">
+                <button type="button" id="var-dataset-tab-table" class="btn-dataset-tab active" title="Xem toàn bộ dữ liệu dạng danh sách bảng">
+                  📑 Dạng Danh Sách
+                </button>
+                <button type="button" id="var-dataset-tab-live" class="btn-dataset-tab" title="Chuyển qua lại từng dòng trực tiếp trên Artboard như tính năng Variable của Illustrator">
+                  🔀 Chuyển Dòng Trên Canvas (Live)
+                </button>
+              </div>
+
+              <!-- View 1: Dạng Bảng Dữ Liệu -->
+              <div id="var-dataset-view-table" class="dataset-view-content">
+                <div class="dataset-hint">💡 Bấm vào dòng bất kỳ để xem nhanh trên Canvas, hoặc kéo ngang để kiểm tra các cột.</div>
+                <div class="dataset-table-container">
+                  <table class="dataset-table" id="var-dataset-table">
+                    <thead id="var-dataset-thead"></thead>
+                    <tbody id="var-dataset-tbody"></tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- View 2: Trình Chuyển Đổi Qua Lại Trực Tiếp (Live Record Switcher kiểu Variable) -->
+              <div id="var-dataset-view-live" class="dataset-view-content" style="display: none;">
+                <div class="dataset-live-card">
+                  <div class="dataset-live-nav-bar">
+                    <button type="button" id="var-live-first" class="btn-live-nav" title="Về dòng đầu tiên">⏮</button>
+                    <button type="button" id="var-live-prev" class="btn-live-nav" title="Dòng trước">◀ Trước</button>
+                    <select id="var-live-select" class="live-record-select" title="Chọn dòng dữ liệu cần xem trên Canvas"></select>
+                    <button type="button" id="var-live-next" class="btn-live-nav" title="Dòng kế tiếp">Sau ▶</button>
+                    <button type="button" id="var-live-last" class="btn-live-nav" title="Đến dòng cuối cùng">⏭</button>
+                  </div>
+                  <div class="dataset-live-status-row">
+                    <span id="var-live-counter" class="live-counter-badge">Dòng 1 / 1</span>
+                    <button type="button" id="var-live-restore-btn" class="btn-live-restore" title="Khôi phục chữ mẫu gốc ban đầu trên Artboard">
+                      ↺ Khôi Phục Mẫu Gốc
+                    </button>
+                  </div>
+                  <div id="var-live-details" class="dataset-live-details">
+                    <!-- Sẽ render động các trường của dòng đang chọn -->
+                  </div>
+                </div>
+                <div class="dataset-hint" style="margin-top: 6px;">
+                  💡 <strong>Giống Variable của Illustrator:</strong> Nhấn ◀ Trước / Sau ▶ hoặc chọn từ danh sách để xem nội dung thay đổi trực tiếp trên Artboard.
+                </div>
               </div>
             </div>
           </div>

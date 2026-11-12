@@ -23,6 +23,8 @@
     finishBatchJpg: true,
     cancelBatchJpg: true,
     setExportAbortFlag: true,
+    previewDatasetRecord: true,
+    restoreOriginalTemplate: true,
     openFolder: true,
     openExplorer: true
   };
@@ -176,6 +178,10 @@
             });
           } else if (method === 'setExportAbortFlag') {
             callback(null, { success: true });
+          } else if (method === 'previewDatasetRecord') {
+            callback(null, { success: true, recordIndex: args[0], message: 'Mô phỏng xem trước dòng ' + (args[0] + 1) });
+          } else if (method === 'restoreOriginalTemplate') {
+            callback(null, { success: true, message: 'Mô phỏng khôi phục mẫu gốc' });
           } else if (method === 'openFolder') {
             callback(null, {
               success: true,
